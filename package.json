@@ -1,0 +1,38 @@
+{
+  "name": "cordova-plugin-sip-fjh",
+  "version": "1.0.0",
+  "description": "SIP - Linphone, update by fjh",
+  "cordova": {
+    "id": "cordova-plugin-sip-fjh",
+    "platforms": [
+      "ios",
+      "android"
+    ]
+  },
+  "keywords": [
+    "cordova",
+    "cordova-ios",
+    "cordova-android",
+	"sip",
+	"linphone",
+	"fjh"
+  ],
+  "author": "wyne1986",
+  "license": "MIT",
+  "homepage": "https://github.com/wyne1986/cordova-plugin-sip-fjh",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/wyne1986/cordova-plugin-sip-fjh"
+  },
+  "bugs": {
+    "url": "https://github.com/wyne1986/cordova-plugin-sip-fjh/issues"
+  },
+  "engines": {
+    "cordovaDependencies": {
+      ">=0.1.0": {
+        "cordova-ios": ">=4.4.0",
+        "cordova-android": ">=6.2.1"
+      }
+    }
+  }
+}
