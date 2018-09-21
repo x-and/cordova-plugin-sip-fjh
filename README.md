@@ -3,6 +3,8 @@
 
 <h3>IOS</h3>
 
+<h4>add the video view on acceptCall</h4>
+
 <h4>Build Settings -> Header Search Paths</h4>
 
 ```
