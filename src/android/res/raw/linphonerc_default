@@ -1,6 +1,8 @@
 [net]
 download_bw=380
 upload_bw=380
+firewall_policy=ice
+stun_server=stun.linphone.org
 
 [sip]
 contact="Linphone Android" <sip:linphone.android@unknown-host>
