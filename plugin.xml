@@ -1,179 +1,161 @@
 <?xml version="1.0" encoding="utf-8"?>
-<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android"
-        id="cordova-plugin-sip-fjh"
-        version="1.0.0">
-    <name>SIP - LinPhone</name>
-    <description>A plugin to integrate linphone features to cordova, update by fjh</description>
-    <license>MIT</license>
-    <keywords>sip,cordova,phonegap,linphone,liblinphone,fjh</keywords>
+<plugin id="cordova-plugin-sip" version="1.2.1" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+  <name>SIP - LinPhone</name>
+  <description>A plugin to integrate linphone features to cordova</description>
+  <license>MIT</license>
+  <keywords>sip,cordova,phonegap,linphone,liblinphone</keywords>
 
-    <engines>
-        <engine name="cordova-android" version=">=4.0.0" />
-        <engine name="cordova-ios" version=">=4.0.0" />
-        <engine name="cordova-wp8" version=">=4.0.0" />
-    </engines>
+  <engines>
+    <engine name="cordova-android" version=">=4.0.0-dev" />
+    <engine name="cordova-ios" version=">=4.0.0-dev" />
+    <!-- <engine name="cordova-wp8" version=">=4.0.0-dev" /> -->
+  </engines>
 
-    <!-- android -->
-    <platform name="android">
-        <config-file target="config.xml" parent="/*">
-            <feature name="Linphone">
-                <param name="android-package" value="com.sip.linphone.Linphone" />
-            </feature>
-        </config-file>
+  <!-- android -->
+  <platform name="android">
+    <config-file target="AndroidManifest.xml" parent="/manifest">
+      <uses-permission android:name="android.permission.RECORD_AUDIO" />
+      <uses-feature
+          android:name="android.hardware.camera"
+          android:required="false" />
+      <uses-feature
+          android:name="android.hardware.camera.autofocus"
+          android:required="false" />
+    </config-file>
+    <config-file target="config.xml" parent="/*">
+      <feature name="Linphone">
+        <param name="android-package" value="com.sip.linphone.Linphone" />
+      </feature>
+    </config-file>
 
-        <source-file src="src/android/src/Linphone.java" target-dir="src/com/sip/linphone" />
-        <source-file src="src/android/src/LinphoneMiniActivity.java" target-dir="src/com/sip/linphone" />
-        <source-file src="src/android/src/LinphoneIncomeActivity.java" target-dir="src/com/sip/linphone" />
-        <source-file src="src/android/src/LinphoneMiniManager.java" target-dir="src/com/sip/linphone" />
-        <source-file src="src/android/src/LinphoneMiniUtils.java" target-dir="src/com/sip/linphone" />
-        <source-file src="src/android/res/layout/incall.xml" target-dir="res/layout" />
-        <source-file src="src/android/res/raw/incoming_chat.wav" target-dir="res/raw" />
-        <source-file src="src/android/res/raw/linphonerc_default" target-dir="res/raw" />
-        <source-file src="src/android/res/raw/linphonerc_factory" target-dir="res/raw" />
-        <source-file src="src/android/res/raw/lpconfig.xsd" target-dir="res/raw" />
-        <source-file src="src/android/res/raw/oldphone_mono.wav" target-dir="res/raw" />
-        <source-file src="src/android/res/raw/ringback.wav" target-dir="res/raw" />
-        <source-file src="src/android/res/raw/toy_mono.wav" target-dir="res/raw" />
-        <source-file src="src/android/res/raw/rootca.pem" target-dir="res/raw" />
+    <framework src="src/android/sip.gradle" custom="true" type="gradleReference" />
 
-        <source-file src="src/android/libs/linphone.jar" target-dir="libs" />
+    <lib-file src="src/android/libs/linphone-sdk-android-4.2-120-g054b910.aar" />
 
-        <source-file src="src/android/libs/arm64-v8a/libbctoolbox-arm64-v8a.so" target-dir="libs/arm64-v8a" />
-        <source-file src="src/android/libs/arm64-v8a/libbctoolbox-tester-arm64-v8a.so" target-dir="libs/arm64-v8a" />
-        <source-file src="src/android/libs/arm64-v8a/libgnustl_shared.so" target-dir="libs/arm64-v8a" />
-        <source-file src="src/android/libs/arm64-v8a/liblinphone-arm64-v8a.so" target-dir="libs/arm64-v8a" />
-        <source-file src="src/android/libs/arm64-v8a/liblinphonetester-arm64-v8a.so" target-dir="libs/arm64-v8a" />
-        <source-file src="src/android/libs/arm64-v8a/libmediastreamer_base-arm64-v8a.so" target-dir="libs/arm64-v8a" />
-        <source-file src="src/android/libs/arm64-v8a/libmediastreamer_voip-arm64-v8a.so" target-dir="libs/arm64-v8a" />
-        <source-file src="src/android/libs/arm64-v8a/libmssilk.so" target-dir="libs/arm64-v8a" />
-        <source-file src="src/android/libs/arm64-v8a/libmswebrtc.so" target-dir="libs/arm64-v8a" />
-        <source-file src="src/android/libs/arm64-v8a/libortp-arm64-v8a.so" target-dir="libs/arm64-v8a" />
+    <source-file src="src/android/src/Linphone.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphoneMiniActivity.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphoneMiniManager.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphoneMiniUtils.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphoneContext.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphoneFirebaseMessaging.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphonePreferences.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphoneBootReceiver.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphoneStorage.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphoneWorker.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphoneDeviceUtils.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/src/LinphoneForegroundService.java" target-dir="src/com/sip/linphone" />
+    <source-file src="src/android/res/layout-land/incall.xml" target-dir="res/layout-land" />
+    <source-file src="src/android/res/layout-port/incall.xml" target-dir="res/layout-port" />
+    <source-file src="src/android/res/layout/dialog.xml" target-dir="res/layout" />
+    <source-file src="src/android/res/raw/linphonerc_default" target-dir="res/raw" />
+    <source-file src="src/android/res/raw/linphonerc_factory" target-dir="res/raw" />
+    <source-file src="src/android/res/raw/lpconfig.xsd" target-dir="res/raw" />
+    <source-file src="src/android/res/raw/ringback.wav" target-dir="res/raw" />
+    <source-file src="src/android/res/raw/rootca.pem" target-dir="res/raw" />
+    <source-file src="src/android/res/raw/oldphone_mono.wav" target-dir="res/raw" />
 
-        <source-file src="src/android/libs/armeabi-v7a/libbctoolbox-armeabi-v7a.so" target-dir="libs/armeabi-v7a" />
-        <source-file src="src/android/libs/armeabi-v7a/libbctoolbox-tester-armeabi-v7a.so" target-dir="libs/armeabi-v7a" />
-        <source-file src="src/android/libs/armeabi-v7a/libgnustl_shared.so" target-dir="libs/armeabi-v7a" />
-        <source-file src="src/android/libs/armeabi-v7a/liblinphone-armeabi-v7a.so" target-dir="libs/armeabi-v7a" />
-        <source-file src="src/android/libs/armeabi-v7a/liblinphonetester-armeabi-v7a.so" target-dir="libs/armeabi-v7a" />
-        <source-file src="src/android/libs/armeabi-v7a/libmediastreamer_base-armeabi-v7a.so" target-dir="libs/armeabi-v7a" />
-        <source-file src="src/android/libs/armeabi-v7a/libmediastreamer_voip-armeabi-v7a.so" target-dir="libs/armeabi-v7a" />
-        <source-file src="src/android/libs/armeabi-v7a/libmssilk.so" target-dir="libs/armeabi-v7a" />
-        <source-file src="src/android/libs/armeabi-v7a/libmswebrtc.so" target-dir="libs/armeabi-v7a" />
-        <source-file src="src/android/libs/armeabi-v7a/libortp-armeabi-v7a.so" target-dir="libs/armeabi-v7a" />
+    <!-- drawable src/android/resources -->
+    <resource-file src="src/android/res/anim/alpha.xml" target="res/anim/alpha.xml" />
+    <resource-file src="src/android/res/anim/alpha_reverse.xml" target="res/anim/alpha_reverse.xml" />
+    <resource-file src="src/android/res/drawable/icon.png" target="res/drawable/icon.png" />
+    <resource-file src="src/android/res/drawable/video_overlay.png" target="res/drawable/video_overlay.png" />
+    <resource-file src="src/android/res/drawable/btn_open.xml" target="res/drawable/btn_open.xml" />
+    <resource-file src="src/android/res/drawable/btn_answer.xml" target="res/drawable/btn_answer.xml" />
+    <resource-file src="src/android/res/drawable/btn_reject.xml" target="res/drawable/btn_reject.xml" />
+    <resource-file src="src/android/res/drawable/btn.png" target="res/drawable/btn.png" />
+    <resource-file src="src/android/res/drawable/round_button.xml" target="res/drawable/round_button.xml" />
+    <resource-file src="src/android/res/drawable/checkbox.xml" target="res/drawable/checkbox.xml" />
+    <resource-file src="src/android/res/drawable/checkbox_checked.png" target="res/drawable/checkbox_checked.png" />
+    <resource-file src="src/android/res/drawable/checkbox_unchecked.png" target="res/drawable/checkbox_unchecked.png" />
 
-        <source-file src="src/android/libs/x86/libbctoolbox-tester-x86.so" target-dir="libs/x86" />
-        <source-file src="src/android/libs/x86/libbctoolbox-x86.so" target-dir="libs/x86" />
-        <source-file src="src/android/libs/x86/libgnustl_shared.so" target-dir="libs/x86" />
-        <source-file src="src/android/libs/x86/liblinphonetester-x86.so" target-dir="libs/x86" />
-        <source-file src="src/android/libs/x86/liblinphone-x86.so" target-dir="libs/x86" />
-        <source-file src="src/android/libs/x86/libmediastreamer_base-x86.so" target-dir="libs/x86" />
-        <source-file src="src/android/libs/x86/libmediastreamer_voip-x86.so" target-dir="libs/x86" />
-        <source-file src="src/android/libs/x86/libmssilk.so" target-dir="libs/x86" />
-        <source-file src="src/android/libs/x86/libmswebrtc.so" target-dir="libs/x86" />
-        <source-file src="src/android/libs/x86/libortp-x86.so" target-dir="libs/x86" />
+    <js-module src="www/cordova-plugins-sip.js" name="linphone">
+      <merges target="cordova.plugins.sip" />
+    </js-module>
+    <config-file target="AndroidManifest.xml" parent="/*">
+      <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+      <uses-permission android:name="android.permission.VIBRATE" />
+      <uses-permission android:name="android.permission.RECORD_AUDIO" />
+      <uses-permission android:name="android.permission.CAMERA" />
+      <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+      <uses-permission android:name="android.permission.WAKE_LOCK" />
+      <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+      <uses-permission android:name="android.permission.CALL_PHONE" />
+      <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+      <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+      <uses-feature android:name="android.hardware.microphone" android:required="true" />
+    </config-file>
+    <config-file target="AndroidManifest.xml" parent="/manifest/application">
+      <activity android:name="com.sip.linphone.LinphoneMiniActivity" android:theme="@android:style/Theme.Black.NoTitleBar" />
+<!--       <service android:exported="false" android:name="com.sip.linphone.LinphoneFirebaseMessaging">
+          <intent-filter>
+              <action android:name="com.google.firebase.MESSAGING_EVENT" />
+          </intent-filter>
+      </service> -->
+      <service android:enabled="true" android:exported="true" android:name="com.sip.linphone.LinphoneForegroundService">
+      </service>
+      <receiver android:name="com.sip.linphone.LinphoneBootReceiver">
+          <intent-filter>
+              <action android:name="android.intent.action.BOOT_COMPLETED" />
+              <action android:name="android.intent.action.ACTION_SHUTDOWN" />
+              <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+          </intent-filter>
+      </receiver>
+    </config-file>
+  </platform>
 
-        <js-module src="www/cordova-plugins-sip.js" name="linphone">
-            <merges target="cordova.plugins.sip" />
-        </js-module>
-        <config-file target="AndroidManifest.xml" parent="/*">
-            <uses-permission android:name="android.permission.RECORD_AUDIO" />
-            <uses-permission android:name="android.permission.CAMERA" />
-            <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
-            <uses-permission android:name="android.permission.WAKE_LOCK" />
-            <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-        </config-file>
-        <config-file target="AndroidManifest.xml" parent="/manifest/application">
-            <activity android:name="com.sip.linphone.LinphoneMiniActivity" android:theme="@android:style/Theme.Black.NoTitleBar" />
-        </config-file>
-    </platform>
+  <!-- ios -->
+  <platform name="ios">
+    <config-file target="config.xml" parent="/*">
+      <feature name="Linphone">
+        <param name="ios-package" value="Linphone"/>
+      </feature>
+    </config-file>
+    <header-file src="src/ios/Linphone.h"/>
+    <source-file src="src/ios/Linphone.m"/>
 
-    <!-- ios -->
-    <platform name="ios">
-        <config-file target="config.xml" parent="/*">
-            <feature name="Linphone">
-                <param name="ios-package" value="Linphone"/>
-            </feature>
-        </config-file>
-        <header-file src="src/ios/Linphone.h"/>
-        <source-file src="src/ios/Linphone.m"/>
-        <source-file src="src/ios/Linphone.xib"/>
+    <podspec>
+        <config>
+            <source url="https://gitlab.linphone.org/BC/public/podspec.git" />
+        </config>
+        <pods use-frameworks="true">
+            <pod name="linphone-sdk" spec="4.3.1" />
+        </pods>
+    </podspec>
+    <framework src="AVFoundation.framework" />
+    <framework src="AudioToolbox.framework" />
+    <framework src="CoreFoundation.framework" />
+    <framework src="CoreMedia.framework" />
+    <framework src="CoreData.framework" />
+    <framework src="CoreAudio.framework" />
+    <framework src="libz.tbd" />
+    <framework src="libsqlite3.tbd" />
+    <framework src="libresolv.tbd" />
+    <framework src="libxml2.tbd" />
+    <framework src="libc++.tbd" />
+    <framework src="libc++abi.tbd" />
 
-        <!-- maybe "Plugins/cordova-plugin-sip/include/linphone/lpconfig.h" -->
-        <header-file src="include/linphone/lpconfig.h" type="BridgingHeader" />
-        <header-file src="include/linphone/linphonecore.h" type="BridgingHeader" />
-        <header-file src="include/linphone/linphonecore_utils.h" type="BridgingHeader" />
+    <js-module src="www/cordova-plugins-sip.js" name="linphone">
+      <merges target="cordova.plugins.sip" />
+    </js-module>
 
-        <!-- <header-file src="src/ios/libs/apple-darwin/include/" /> -->
+    <preference name="CAMERA_USAGE_DESCRIPTION" default="This will allow ${PRODUCT_NAME} to make videocalls with Intercom."/>
+    <preference name="MICROPHONE_USAGE_DESCRIPTION" default="This will allow ${PRODUCT_NAME} to make talk with Intercom."/>
+    <config-file target="*-Info.plist" parent="NSCameraUsageDescription">
+        <string>$CAMERA_USAGE_DESCRIPTION</string>
+    </config-file>
+    <config-file target="*-Info.plist" parent="NSMicrophoneUsageDescription">
+        <string>$MICROPHONE_USAGE_DESCRIPTION</string>
+    </config-file>
+  </platform>
 
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/mediastreamer/plugins/libmsamr.a" target-dir="lib/mediastreamer/plugins" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/mediastreamer/plugins/libmsbcg729.a" target-dir="lib/mediastreamer/plugins" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/mediastreamer/plugins/libmsopenh264.a" target-dir="lib/mediastreamer/plugins" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/mediastreamer/plugins/libmssilk.a" target-dir="lib/mediastreamer/plugins" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/mediastreamer/plugins/libmswebrtc.a" target-dir="lib/mediastreamer/plugins" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/mediastreamer/plugins/libmsx264.a" target-dir="lib/mediastreamer/plugins" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libantlr3c.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libavcodec.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libavutil.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libbcg729.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libbctoolbox.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libbellesip.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libbzrtp.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libcorec.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libcunit.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libebml2.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libgsm.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/liblinphone.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/liblinphonetester.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libmatroska2.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libmediastreamer_base.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libmediastreamer_voip.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libopencore-amrnb.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libopencore-amrwb.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libopenh264.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libopus.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libortp.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libpolarssl.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libspeex.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libspeexdsp.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libsrtp.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libswresample.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libswscale.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libtunnel.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libvo-amrwbenc.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libvpx.a" target-dir="lib" />
-        <source-file framework="true" src="src/ios/libs/apple-darwin/lib/libx264.a" target-dir="lib" />
+  <!-- wp8 -->
+  <platform name="wp8">
+    <config-file target="config.xml" parent="/*">
+      <feature name="Linphone">
+        <param name="wp-package" value="Linphone"/>
+      </feature>
+    </config-file>
 
-        <source-file src="src/ios/libs/apple-darwin/share/" />
-
-        <framework src="AVFoundation.framework" />
-        <framework src="AudioToolbox.framework" />
-        <framework src="CoreFoundation.framework" />
-        <framework src="CoreMedia.framework" />
-        <framework src="CoreData.framework" />
-        <framework src="CoreAudio.framework" />
-        <framework src="libz.tbd" />
-        <framework src="libsqlite3.tbd" />
-        <framework src="libresolv.tbd" />
-        <framework src="libxml2.tbd" />
-        <framework src="libstdc++.6.0.9.tbd" />
-        <framework src="libstdc++.6.tbd" />
-        <framework src="libstdc++.tbd" />
-        <framework src="libc++abi.tbd" />
-
-        <js-module src="www/cordova-plugins-sip.js" name="linphone">
-            <merges target="cordova.plugins.sip" />
-        </js-module>
-
-
-    </platform>
-
-    <!-- wp8 -->
-    <platform name="wp8">
-        <config-file target="config.xml" parent="/*">
-            <feature name="Linphone">
-                <param name="wp-package" value="Linphone"/>
-            </feature>
-        </config-file>
-
-        <source-file src="src/wp/Linphone.cs" />
-    </platform>
+    <source-file src="src/wp/Linphone.cs" />
+  </platform>
 </plugin>

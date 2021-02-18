@@ -1,8 +1,6 @@
 #import "Linphone.h"
 #import <Cordova/CDV.h>
 #import <AudioToolbox/AudioToolbox.h>
-#import <AVFoundation/AVFoundation.h>
-#import <AVKit/AVKit.h>
 
 @implementation Linphone
 
@@ -20,6 +18,8 @@ static void stop(int signum){
 }
 //+(void) registration_state_changed:(struct _LinphoneCore*) lc:(LinphoneProxyConfig*) cfg:(LinphoneRegistrationState) cstate: (const char*)message
 static void registration_state_changed(struct _LinphoneCore *lc, LinphoneProxyConfig *cfg, LinphoneRegistrationState cstate, const char *message){
+    
+
     
     //Linphone *neco = [ Linphone new];
     if( cstate == LinphoneRegistrationFailed){
@@ -65,10 +65,6 @@ static void call_state_changed(LinphoneCore *lc, LinphoneCall *call, LinphoneCal
     }
     if(cstate == LinphoneCallIncomingReceived){
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"Incoming"];
-        
-        AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
-        AudioServicesPlaySystemSound(1000);
-        
         [himself.commandDelegate sendPluginResult:pluginResult callbackId:callCallBackID];
         
     }
@@ -80,12 +76,7 @@ static void call_state_changed(LinphoneCore *lc, LinphoneCall *call, LinphoneCal
     bool isAccept = [command.arguments objectAtIndex:0];
     if( isAccept == TRUE){
         
-        LinphoneView *lview = [[LinphoneView alloc]init];
-        UIViewController *rootViewController = [[[UIApplication sharedApplication] keyWindow] rootViewController];
-        lview.lc = lc;
-        lview.call = call;
-        [rootViewController presentViewController:lview animated:NO completion:nil];
-        
+        linphone_core_accept_call( lc, call);
         callCallBackID = command.callbackId;
     }
     else{
@@ -165,6 +156,8 @@ static void call_state_changed(LinphoneCore *lc, LinphoneCall *call, LinphoneCal
 }
 -(void)listenTick:(NSTimer *)timer {
     linphone_core_iterate(lc);
+    
+
 }
 
 - (void)logout:(CDVInvokedUrlCommand*)command
@@ -208,20 +201,9 @@ static void call_state_changed(LinphoneCore *lc, LinphoneCall *call, LinphoneCal
 
 - (void)videocall:(CDVInvokedUrlCommand*)command
 {
-    
-    LinphoneCallParams *cparams = linphone_core_create_call_params(lc, call);
-    linphone_call_enable_camera(lc, true);
-    linphone_call_params_enable_video(cparams, true);
-    linphone_call_params_enable_audio(cparams, true);
-    linphone_core_accept_call_with_params(lc, call, cparams);
-    
-    callCallBackID = command.callbackId;
     CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"OK"];
-    NSString* address = [command.arguments objectAtIndex:0];
-    NSString* displayName = [command.arguments objectAtIndex:1];
     
-    call = linphone_core_invite_with_params(lc, (char *)[address UTF8String], cparams);
-    linphone_call_ref(call);
+    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (void)hangup:(CDVInvokedUrlCommand*)command
@@ -297,86 +279,4 @@ static void call_state_changed(LinphoneCore *lc, LinphoneCall *call, LinphoneCal
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (void)sendMessage:(CDVInvokedUrlCommand *)command
-{
-    
-    CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsString:@"OK"];
-    NSString* addrs = [command.arguments objectAtIndex:0];
-    NSString* msgs = [command.arguments objectAtIndex:1];
-    const LinphoneAddress *addr = linphone_core_create_address(lc, (char *)[addrs UTF8String]);
-    LinphoneChatRoom *chat_room = linphone_core_get_chat_room(lc,addr);
-    LinphoneChatMessage *msg = linphone_chat_room_create_message(chat_room, (char *)[msgs UTF8String]);
-    linphone_chat_room_send_chat_message(chat_room, msg);
-    linphone_chat_room_ref(chat_room);
-    linphone_chat_room_unref(chat_room);
-    
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-    
-}
-
-@end
-
-@implementation LinphoneView
-
-- (id)initWithNibName:(NSString*)nibNameOrNil bundle:(NSBundle*)nibBundleOrNil
-{
-    self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-    return self;
-}
-
-- (id)init
-{
-    self = [super init];
-    return self;
-}
-
-- (void)viewWillAppear:(BOOL)animated
-{
-    _hangupbtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    _hangupbtn.frame = CGRectMake(116, 510, 142,42);
-    [_hangupbtn setBackgroundColor:[UIColor redColor]];
-    [self.view addSubview:_hangupbtn];
-    [_hangupbtn setTitle:@"挂断" forState:UIControlStateNormal];
-    [_hangupbtn addTarget:self action:@selector(hangupEvt:) forControlEvents:UIControlEventTouchUpInside];
-    [self.view addSubview:_hangupbtn];
-    
-    _lpview = [[UIView alloc] initWithFrame:CGRectMake(251, 0,   124, 127)];
-    _lpview.backgroundColor = [UIColor blackColor];
-    [self.view addSubview:_lpview];
-    
-    _lpcview = [[UIView alloc] initWithFrame:CGRectMake(0, 135,   375, 375)];
-    _lpcview.backgroundColor = [UIColor blackColor];
-    [self.view addSubview:_lpcview];
-
-    linphone_core_set_native_video_window_id(_lc, (__bridge void *)(_lpcview));
-    linphone_core_set_native_preview_window_id(_lc, (__bridge void *)(_lpview));
-    linphone_core_video_enabled(_lc);
-    linphone_core_video_preview_enabled(_lc);
-    LinphoneCallParams *cparams = linphone_core_create_call_params(_lc, _call);
-    linphone_call_params_enable_video(cparams, true);
-    linphone_call_params_enable_audio(cparams, true);
-    
-    linphone_core_accept_call_with_params(_lc, _call, cparams);
-    [super viewWillAppear:animated];
-}
-
-- (void)viewDidLoad
-{
-    [super viewDidLoad];
-    // Do any additional setup after loading the view from its nib.
-}
-
-- (void)viewDidUnload
-{
-    [super viewDidUnload];
-    // Release any retained subviews of the main view.
-    // e.g. self.myOutlet = nil;
-}
-
--(void)hangupEvt:(UIButton*)button
-{
-    linphone_core_terminate_call(_lc, _call);
-    _call = NULL;
-    [self dismissViewControllerAnimated:YES completion:nil];
-}
 @end

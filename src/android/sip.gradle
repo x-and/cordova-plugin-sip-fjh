@@ -1,0 +1,34 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.4.1'
+        // classpath 'com.google.gms:google-services:4.3.3'
+    }
+}
+
+repositories {
+    flatDir {
+        dirs 'libs'
+    }
+    maven {
+        url "https://linphone.org/maven_repository"
+    }
+    mavenCentral()
+    maven {
+        url "https://maven.google.com"
+    }
+}
+
+dependencies {
+    // implementation 'com.google.firebase:firebase-messaging:20.0.1'
+    implementation 'androidx.work:work-runtime:2.2.0'
+    implementation(name:'linphone-sdk-android-4.2-120-g054b910', ext:'aar')
+}
+
+// cdvPluginPostBuildExtras.add({
+//     apply plugin: com.google.gms.googleservices.GoogleServicesPlugin
+// })

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:keepScreenOn="true"
+    android:id="@+id/topLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#ffffff">
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:text="Домофон"
+        android:layout_margin="25dp"
+        android:textSize="26dp"
+        android:textColor="#555555" >
+    </TextView>
+
+    <org.linphone.mediastream.video.display.GL2JNIView
+        android:id="@+id/videoSurface"
+        android:layout_width="350dp"
+        android:layout_height="287dp"
+        android:layout_below ="@+id/title"
+        android:layout_marginTop="15dp"
+        android:layout_centerHorizontal="true" />
+
+    <ImageView
+        android:id="@+id/videoOverlay"
+        android:layout_width="350dp"
+        android:layout_height="287dp"
+        android:layout_below ="@+id/title"
+        android:layout_marginTop="15dp"
+        android:layout_centerHorizontal="true"
+        android:background="@drawable/video_overlay" />
+
+    <SurfaceView
+        android:id="@+id/videoCaptureSurface"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_below ="@+id/videoSurface"
+        android:layout_centerHorizontal="true" />
+
+    <Button android:id="@+id/rejectButton"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_centerVertical="true"
+        android:layout_alignParentBottom="true"
+        android:layout_toLeftOf="@+id/unlockButton"
+        android:layout_marginBottom="100dp"
+        android:layout_marginRight="20dp"
+        android:onClick="rejectAnswer"
+        android:elevation="6dp"
+        android:paddingLeft="29dp"
+        android:drawableStart="@drawable/btn_reject"
+        android:background="@drawable/round_button" />
+
+    <Button
+        android:id="@+id/unlockButton"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerInParent="true"
+        android:layout_marginBottom="100dp"
+        android:paddingLeft="30dp"
+        android:elevation="6dp"
+        android:onClick="butUnlock"
+        android:drawableStart="@drawable/btn_open"
+        android:background="@drawable/round_button" />
+
+    <Button
+        android:id="@+id/answerButton"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerVertical="true"
+        android:layout_marginLeft="20dp"
+        android:layout_marginBottom="104dp"
+        android:layout_toRightOf="@+id/unlockButton"
+        android:background="@drawable/round_button"
+        android:drawableStart="@drawable/btn_answer"
+        android:elevation="6dp"
+        android:onClick="butAnswer"
+        android:paddingLeft="30dp" />
+
+    <TextView
+        android:id="@+id/rejectText"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_alignParentBottom="true"
+        android:layout_toLeftOf="@+id/unlockText"
+        android:layout_marginBottom="70dp"
+        android:textAlignment="center"
+        android:text="Отклонить"
+        android:textSize="14dp"
+        android:textColor="#999999" >
+    </TextView>
+
+    <TextView
+        android:id="@+id/unlockText"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerInParent="true"
+        android:layout_marginBottom="70dp"
+        android:textAlignment="center"
+        android:text="Открыть"
+        android:textSize="14dp"
+        android:textColor="#999999" >
+    </TextView>
+
+    <TextView
+        android:id="@+id/answerText"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_toRightOf="@+id/unlockText"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="70dp"
+        android:textAlignment="center"
+        android:text="Ответить"
+        android:textSize="14dp"
+        android:textColor="#999999" >
+    </TextView>
+
+</RelativeLayout>

@@ -1,5 +1,14 @@
 module.exports =
 {
+    finish: function (successCallback, errorCallback) {
+        cordova.exec(
+            successCallback,
+            errorCallback,
+            "Linphone",
+            "finish",
+            []
+        );
+    },
     login: function (username, password, domain, successCallback, errorCallback) {
         cordova.exec(
             successCallback,
@@ -7,6 +16,24 @@ module.exports =
             "Linphone",
             "login",
             [username, password, domain]
+        );
+    },
+    setPushNotification: function (appId, regId, successCallback, errorCallback) {
+        cordova.exec(
+            successCallback,
+            errorCallback,
+            "Linphone",
+            "setPushNotification",
+            [appId, regId]
+        );
+    },
+    ensureRegistered: function (successCallback, errorCallback) {
+        cordova.exec(
+            successCallback,
+            errorCallback,
+            "Linphone",
+            "ensureRegistered",
+            []
         );
     },
     logout: function (successCallback, errorCallback) {
@@ -35,6 +62,24 @@ module.exports =
                 "listenCall",
                 []
             );
+    },
+    setStunServer: function (stunServer, successCallback, errorCallback) {
+        cordova.exec(
+            successCallback,
+            errorCallback,
+            "Linphone",
+            "setStunServer",
+            [stunServer]
+        );
+    },
+    disableStunServer: function (successCallback, errorCallback) {
+        cordova.exec(
+            successCallback,
+            errorCallback,
+            "Linphone",
+            "disableStunServer",
+            []
+        );
     },
     call: function (address, displayName, successCallback, errorCallback) {
         cordova.exec(
@@ -98,5 +143,14 @@ module.exports =
             "sendDtmf",
             [number]
         );
-    }
+    },
+    sendLogcat: function (successCallback, errorCallback) {
+        cordova.exec(
+            successCallback,
+            errorCallback,
+            "Linphone",
+            "sendLogcat",
+            []
+        );
+    },
 };

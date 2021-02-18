@@ -18,528 +18,892 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.res.Resources;
-import android.media.MediaPlayer;
-import android.media.RingtoneManager;
-import android.view.SurfaceView;
+import android.media.AudioManager;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
+import android.os.Build;
+import android.os.Vibrator;
+
+import androidx.annotation.NonNull;
+
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.iid.FirebaseInstanceId;
+//import com.google.firebase.iid.InstanceIdResult;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
-import org.linphone.core.LinphoneAddress;
-import org.linphone.core.LinphoneAuthInfo;
-import org.linphone.core.LinphoneCall;
-import org.linphone.core.LinphoneCall.State;
-import org.linphone.core.LinphoneCallParams;
-import org.linphone.core.LinphoneCallStats;
-import org.linphone.core.LinphoneChatMessage;
-import org.linphone.core.LinphoneChatRoom;
-import org.linphone.core.LinphoneContent;
-import org.linphone.core.LinphoneCore;
-import org.linphone.core.LinphoneCore.EcCalibratorStatus;
-import org.linphone.core.LinphoneCore.GlobalState;
-import org.linphone.core.LinphoneCore.RegistrationState;
-import org.linphone.core.LinphoneCore.RemoteProvisioningState;
-import org.linphone.core.LinphoneCoreException;
-import org.linphone.core.LinphoneCoreFactory;
-import org.linphone.core.LinphoneCoreListener;
-import org.linphone.core.LinphoneEvent;
-import org.linphone.core.LinphoneFriend;
-import org.linphone.core.LinphoneFriendList;
-import org.linphone.core.LinphoneInfoMessage;
-import org.linphone.core.LinphoneProxyConfig;
+import org.linphone.core.Address;
+import org.linphone.core.AuthInfo;
+import org.linphone.core.AuthMethod;
+import org.linphone.core.Call;
+import org.linphone.core.Call.State;
+import org.linphone.core.CallLog;
+import org.linphone.core.CallParams;
+import org.linphone.core.CallStats;
+import org.linphone.core.ChatMessage;
+import org.linphone.core.ChatRoom;
+import org.linphone.core.ConfiguringState;
+import org.linphone.core.Content;
+import org.linphone.core.Core;
+import org.linphone.core.CoreListener;
+import org.linphone.core.EcCalibratorStatus;
+import org.linphone.core.Event;
+import org.linphone.core.Factory;
+import org.linphone.core.Friend;
+import org.linphone.core.FriendList;
+import org.linphone.core.GlobalState;
+import org.linphone.core.InfoMessage;
+import org.linphone.core.NatPolicy;
+import org.linphone.core.PresenceModel;
+import org.linphone.core.ProxyConfig;
 import org.linphone.core.PublishState;
-import org.linphone.core.Reason;
+import org.linphone.core.RegistrationState;
 import org.linphone.core.SubscriptionState;
+import org.linphone.core.Transports;
+import org.linphone.core.VersionUpdateCheckResult;
 import org.linphone.mediastream.Log;
 import org.linphone.mediastream.video.capture.hwconf.AndroidCameraConfiguration;
 import org.linphone.mediastream.video.capture.hwconf.AndroidCameraConfiguration.AndroidCamera;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
 /**
  * @author Sylvain Berfini
  */
-public class LinphoneMiniManager implements LinphoneCoreListener {
-	public static LinphoneMiniManager mInstance;
-	public static Context mContext;
-	public static LinphoneCore mLinphoneCore;
-    //public static LinphonePreferences mPrefs;
-	public static Timer mTimer;
-	public static SurfaceView mCaptureView;
-	public CallbackContext mCallbackContext;
-	public CallbackContext mLoginCallbackContext;
-	public MediaPlayer mMediaPlayer;
+public class LinphoneMiniManager implements CoreListener {
+    private static final String TAG = "LinphoneSip";
+    private static final int RANDOM_PORT = -1;
+    private static final int SIP_PORT = RANDOM_PORT;
 
-	public LinphoneMiniManager(Context c) {
-		mContext = c;
-		LinphoneCoreFactory.instance().setDebugMode(true, "Linphone Mini");
-        //mPrefs = LinphonePreferences.instance();
+    public static Boolean flToken = false;
 
-		try {
-			String basePath = mContext.getFilesDir().getAbsolutePath();
-			copyAssetsFromPackage(basePath);
-			mLinphoneCore = LinphoneCoreFactory.instance().createLinphoneCore(this, basePath + "/.linphonerc", basePath + "/linphonerc", null, mContext);
-			initLinphoneCoreValues(basePath);
+    public static LinphoneMiniManager mInstance;
+    public static Context mContext;
+    public static Core mCore;
+    public static LinphonePreferences mPrefs;
+    public static Timer mTimer;
+    public CallbackContext mCallbackContext;
+    public CallbackContext mLoginCallbackContext;
+    private AudioManager mAudioManager;
+    public Activity callActivity;
+    private LinphoneStorage mStorage;
+    private final Vibrator mVibrator;
 
-			setUserAgent();
-			setFrontCamAsDefault();
-			startIterate();
-			mInstance = this;
-	        mLinphoneCore.setNetworkReachable(true); // Let's assume it's true
+    public void onMessageSent(Core core, ChatRoom chatRoom, ChatMessage chatMessage) {
 
-			mCaptureView = new SurfaceView(mContext);
-
-		} catch (LinphoneCoreException e) {
-		} catch (IOException e) {
-		}
-	}
-
-    public LinphoneCore getLc(){
-        return mLinphoneCore;
     }
 
-	public static LinphoneMiniManager getInstance() {
-		return mInstance;
-	}
+    public void onChatRoomRead(Core core, ChatRoom chatRoom) {
 
-	public void destroy() {
-		try {
-			mTimer.cancel();
-			mLinphoneCore.destroy();
-		}
-		catch (RuntimeException e) {
-		}
-		finally {
-			mLinphoneCore = null;
-			mInstance = null;
-		}
-	}
+    }
 
-	private void startIterate() {
-		TimerTask lTask = new TimerTask() {
-			@Override
-			public void run() {
-				mLinphoneCore.iterate();
-			}
-		};
+    public LinphoneMiniManager(Context c, boolean isPush) {
+        mContext = c;
+        mVibrator = (Vibrator) mContext.getSystemService(Context.VIBRATOR_SERVICE);
 
-		mTimer = new Timer("LinphoneMini scheduler");
-		mTimer.schedule(lTask, 0, 20);
-	}
+        Factory.instance().setDebugMode(true, TAG /*"Linphone Mini"*/);
 
+        android.util.Log.d(TAG, "Start initializing Linphone");
 
+        mPrefs = LinphonePreferences.instance();
 
-	private void setUserAgent() {
-		try {
-			String versionName = mContext.getPackageManager().getPackageInfo(mContext.getPackageName(), 0).versionName;
-			if (versionName == null) {
-				versionName = String.valueOf(mContext.getPackageManager().getPackageInfo(mContext.getPackageName(), 0).versionCode);
-			}
-			mLinphoneCore.setUserAgent("LinphoneMiniAndroid", versionName);
-		} catch (NameNotFoundException e) {
-		}
-	}
+        mStorage = new LinphoneStorage(mContext);
 
-	private void setFrontCamAsDefault() {
-		int camId = 0;
-		AndroidCamera[] cameras = AndroidCameraConfiguration.retrieveCameras();
-		for (AndroidCamera androidCamera : cameras) {
-			if (androidCamera.frontFacing)
-				camId = androidCamera.id;
-		}
-		mLinphoneCore.setVideoDevice(camId);
-	}
+        mAudioManager = ((AudioManager) mContext.getSystemService(Context.AUDIO_SERVICE));
 
-	private void copyAssetsFromPackage(String basePath) throws IOException {
-		String package_name = mContext.getPackageName();
-		Resources resources = mContext.getResources();
+        try {
+            String basePath = mContext.getFilesDir().getAbsolutePath();
 
-		LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("oldphone_mono", "raw", package_name), basePath + "/oldphone_mono.wav");
-		LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("ringback", "raw", package_name), basePath + "/ringback.wav");
-		LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("toy_mono", "raw", package_name), basePath + "/toy_mono.wav");
-		LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("linphonerc_default", "raw", package_name), basePath + "/.linphonerc");
-		LinphoneMiniUtils.copyFromPackage(mContext, resources.getIdentifier("linphonerc_factory", "raw", package_name), new File(basePath + "/linphonerc").getName());
-		LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("lpconfig", "raw", package_name), basePath + "/lpconfig.xsd");
-		LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("rootca", "raw", package_name), basePath + "/rootca.pem");
-	}
+            if (!isPush) {
+                copyAssetsFromPackage(basePath);
+            }
 
-	private void initLinphoneCoreValues(String basePath) {
-		mLinphoneCore.setContext(mContext);
-		mLinphoneCore.setRing(null);
-		mLinphoneCore.setRootCA(basePath + "/rootca.pem");
-		mLinphoneCore.setPlayFile(basePath + "/toy_mono.wav");
-		mLinphoneCore.setChatDatabasePath(basePath + "/linphone-history.db");
+            mCore = Factory.instance().createCore(mPrefs.getLinphoneDefaultConfig(), mPrefs.getLinphoneFactoryConfig(), mContext);
 
-		int availableCores = Runtime.getRuntime().availableProcessors();
-		mLinphoneCore.setCpuCount(availableCores);
-	}
+            mCore.addListener(this);
+
+            mCore.enableIpv6(false);
+
+            if (isPush) {
+                android.util.Log.w(TAG,
+                        "[Manager] We are here because of a received push notification, enter background mode before starting the Core");
+                mCore.enterBackground();
+            }
+
+            mCore.start();
+
+            initCoreValues(basePath);
+
+            setUserAgent();
+
+            mCore.setNetworkReachable(true); // Let's assume it's true
+
+            startIterate();
+
+            mInstance = this;
+
+            if (!isPush) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    ConnectivityManager connectivityManager = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+
+                    connectivityManager.registerNetworkCallback(
+                            new NetworkRequest.Builder()
+                                    .addTransportType(NetworkCapabilities.TRANSPORT_CELLULAR)
+                                    .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                                    .build(),
+                            new ConnectivityManager.NetworkCallback() {
+                                @Override
+                                public void onLost(Network network) {
+                                    if (mCore != null && LinphoneContext.hasForeground()) {
+                                        android.util.Log.d(TAG, "connection lost");
+                                        mCore.refreshRegisters();
+                                    }
+                                }
+
+                                @Override
+                                public void onAvailable(Network network) {
+                                    if (mCore != null && LinphoneContext.hasForeground()) {
+                                        android.util.Log.d(TAG, "connection check - refreshRegisters");
+                                        mCore.refreshRegisters();
+                                    }
+                                }
+                            }
+                    );
+                }
+
+                Log.i(
+                        "[Push Notification] firebase push sender id ");
+//                try {
+//                    FirebaseInstanceId.getInstance()
+//                            .getInstanceId()
+//                            .addOnCompleteListener(
+//                                    new OnCompleteListener<InstanceIdResult>() {
+//                                        @Override
+//                                        public void onComplete(@NonNull Task<InstanceIdResult> task) {
+//                                            if (!task.isSuccessful()) {
+//                                                android.util.Log.e(TAG,
+//                                                        "[Push Notification] firebase getInstanceId failed: "
+//                                                                + task.getException());
+//                                                return;
+//                                            }
+//                                            String token = task.getResult().getToken();
+//                                            android.util.Log.i(TAG, "[Push Notification] firebase token is: " + token);
+//                                            LinphonePreferences.instance()
+//                                                    .setPushNotificationRegistrationID(token);
+//                                        }
+//                                    });
+//                } catch (Exception e) {
+//                    android.util.Log.e(TAG, "[Push Notification] firebase not available.");
+//                }
+            }
+        } catch (IOException e) {
+            android.util.Log.d(TAG, "Error initializing Linphone");
+            Log.e(new Object[]{"Error initializing Linphone", e.getMessage()});
+        }
+    }
+
+    public Core getLc(){
+        return mCore;
+    }
+
+    public static LinphoneMiniManager getInstance() {
+        return mInstance;
+    }
+
+    public void destroy() {
+        try {
+            mTimer.cancel();
+            mCore.stopRinging();
+            mCore.stopConferenceRecording();
+            mCore.stopDtmf();
+            mCore.stopDtmfStream();
+            mCore.stopEchoTester();
+        } catch (RuntimeException e) {
+
+        } finally {
+            destroyCore();
+
+            mCore = null;
+            mInstance = null;
+        }
+    }
+
+    private void destroyCore() {
+        Log.w("[Manager] Destroying Core");
+
+        if (LinphonePreferences.instance() != null) {
+            mCore.setNetworkReachable(false);
+        }
+
+        mCore.stop();
+        mCore.removeListener(this);
+    }
+
+    private void startIterate() {
+        TimerTask lTask = new TimerTask() {
+            @Override
+            public void run() {
+                mCore.iterate();
+            }
+        };
+
+        mTimer = new Timer("LinphoneMini scheduler");
+        mTimer.schedule(lTask, 0, 20);
+    }
+
+    private void setUserAgent() {
+        try {
+            String versionName = mContext.getPackageManager().getPackageInfo(mContext.getPackageName(), 0).versionName;
+            if (versionName == null) {
+                versionName = String.valueOf(mContext.getPackageManager().getPackageInfo(mContext.getPackageName(), 0).versionCode);
+            }
+            mCore.setUserAgent("LinphoneMiniAndroid", versionName);
+        } catch (NameNotFoundException e) {
+        }
+    }
+
+    private void setFrontCamAsDefault() {
+        int camId = 0;
+        AndroidCamera[] cameras = AndroidCameraConfiguration.retrieveCameras();
+        for (AndroidCamera androidCamera : cameras) {
+            if (androidCamera.frontFacing)
+                camId = androidCamera.id;
+        }
+        mCore.setVideoDevice(""+camId);
+    }
+
+    private void copyAssetsFromPackage(String basePath) throws IOException {
+        String package_name = mContext.getPackageName();
+        Resources resources = mContext.getResources();
+
+        LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("oldphone_mono", "raw", package_name), basePath + "/oldphone_mono.wav", true);
+        LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("ringback", "raw", package_name), basePath + "/ringback.wav", true);
+        LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("linphonerc_default", "raw", package_name), basePath + "/.linphonerc");
+        LinphoneMiniUtils.copyFromPackage(mContext, resources.getIdentifier("linphonerc_factory", "raw", package_name), new File(basePath + "/linphonerc").getName());
+        LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("lpconfig", "raw", package_name), basePath + "/lpconfig.xsd");
+        LinphoneMiniUtils.copyIfNotExist(mContext, resources.getIdentifier("rootca", "raw", package_name), basePath + "/rootca.pem");
+    }
+
+    private void initCoreValues(String basePath) {
+        mCore.setRootCa(basePath + "/rootca.pem");
+        mCore.setPlayFile(basePath + "/toy_mono.wav");
+        mCore.setCallLogsDatabasePath(basePath + "/linphone-history.db");
+        mCore.setRing(basePath + "/oldphone_mono.wav");
+        mCore.setRingDuringIncomingEarlyMedia(true);
+
+        mCore.enableEchoCancellation(true);
+        mCore.enableEchoLimiter(true);
+    }
 
     public void newOutgoingCall(String to, String displayName) {
-        LinphoneAddress lAddress;
-        try {
-            lAddress = mLinphoneCore.interpretUrl(to);
-            LinphoneProxyConfig isLowBandwidthConnection = mLinphoneCore.getDefaultProxyConfig();
+        Address lAddress;
+        lAddress = mCore.interpretUrl(to);
 
-            LinphoneProxyConfig lpc = mLinphoneCore.getDefaultProxyConfig();
+        ProxyConfig lpc = mCore.getDefaultProxyConfig();
 
-            if (lpc!=null && lAddress.asStringUriOnly().equals(lpc.getIdentity())) {
-                return;
-            }
-        } catch (LinphoneCoreException var8) {
+        if (lpc!=null && lAddress.asStringUriOnly().equals(lpc.getDomain())) {
             return;
         }
 
         lAddress.setDisplayName(displayName);
 
-        if(mLinphoneCore.isNetworkReachable()) {
-            try {
-				//TODO:SEZER
-                LinphoneCallParams params = mLinphoneCore.createCallParams(mLinphoneCore.getCurrentCall());
-                params.setVideoEnabled(true);
-                mLinphoneCore.inviteAddressWithParams(lAddress, params);
-            } catch (LinphoneCoreException var7) {
-                return;
-            }
+        if(mCore.isNetworkReachable()) {
+            CallParams params = mCore.createCallParams(mCore.getCurrentCall());
+            params.enableVideo(true);
+            mCore.inviteAddressWithParams(lAddress, params);
         } else {
             Log.e(new Object[]{"Error: Network unreachable"});
         }
-
     }
 
-    public void terminateCall() {
-        if (mLinphoneCore.isIncall()) {
-            mLinphoneCore.terminateCall(mLinphoneCore.getCurrentCall());
-            destroy();
+    public void setPushNotification(String appId, String regId) {
+        Core core = getLc();
+        if (core == null) {
+            return;
+        }
+
+        android.util.Log.d(TAG, "[SET Push Notification] " + appId + " " + regId);
+
+        if (regId != "") {
+            // Add push infos to exisiting proxy configs
+            if (core.getProxyConfigList().length > 0) {
+                for (ProxyConfig lpc : core.getProxyConfigList()) {
+                    if (lpc == null) continue;
+                    if (!lpc.isPushNotificationAllowed()) {
+                        lpc.edit();
+                        lpc.setContactUriParameters(null);
+                        lpc.done();
+                        if (lpc.getIdentityAddress() != null)
+                            android.util.Log.d(TAG,
+                                    "[SET Push Notification] infos removed from proxy config "
+                                            + lpc.getIdentityAddress().asStringUriOnly());
+                    } else {
+                        String contactInfos =
+                                "app-id="
+                                        + appId
+                                        + ";pn-type=firebase"
+                                        + ";pn-timeout=0"
+                                        + ";pn-tok="
+                                        + regId
+                                        + ";pn-silent=1";
+
+                        android.util.Log.d(TAG, contactInfos);
+                        String prevContactParams = lpc.getContactParameters();
+                        if (prevContactParams == null
+                                || prevContactParams.compareTo(contactInfos) != 0) {
+                            lpc.edit();
+                            lpc.setContactUriParameters(contactInfos);
+                            lpc.done();
+                            if (lpc.getIdentityAddress() != null)
+                                android.util.Log.d(TAG,
+                                        "[Push Notification] infos added to proxy config "
+                                                + lpc.getIdentityAddress().asStringUriOnly());
+                        }
+                    }
+                }
+                android.util.Log.d(TAG,
+                        "[SET Push Notification] Refreshing registers to ensure token is up to date: "
+                                + regId);
+                core.refreshRegisters();
+            } else {
+                android.util.Log.d(TAG, "[Push Notification] enable token flag");
+                flToken = true;
+                loginFromStorage();
+            }
+        } else {
+            if (core.getProxyConfigList().length > 0) {
+                for (ProxyConfig lpc : core.getProxyConfigList()) {
+                    lpc.edit();
+                    lpc.setContactUriParameters(null);
+                    lpc.done();
+                    if (lpc.getIdentityAddress() != null)
+                        android.util.Log.d(TAG,
+                                "[SET Push Notification] infos removed from proxy config "
+                                        + lpc.getIdentityAddress().asStringUriOnly());
+                }
+                core.refreshRegisters();
+            }
         }
     }
 
-    public void declineCall(){
-	    mLinphoneCore.declineCall(mLinphoneCore.getCurrentCall(), Reason.fromInt(0));
+    public void terminateCall() {
+        if (mCore.inCall()) {
+            Call c = mCore.getCurrentCall();
+            if (c != null) c.terminate();
+        }
     }
 
     public boolean toggleEnableCamera() {
-        if (mLinphoneCore.isIncall()) {
-            boolean enabled = !mLinphoneCore.getCurrentCall().cameraEnabled();
-            enableCamera(mLinphoneCore.getCurrentCall(), enabled);
+        if (mCore.inCall()) {
+            boolean enabled = !mCore.getCurrentCall().cameraEnabled();
+            enableCamera(mCore.getCurrentCall(), enabled);
             return enabled;
         }
         return false;
     }
 
     public boolean toggleEnableSpeaker() {
-        if (mLinphoneCore.isIncall()) {
-			boolean enabled = !mLinphoneCore.isSpeakerEnabled();
-			mLinphoneCore.enableSpeaker(enabled);
-            return enabled;
-        }
+//        if (mCore.inCall()) {
+//			boolean enabled = !mCore.;
+//			mCore.enableSpeaker(enabled);
+//            return enabled;
+//        }
         return false;
     }
 
     public boolean toggleMute() {
-        if (mLinphoneCore.isIncall()) {
-			boolean enabled = !mLinphoneCore.isMicMuted();
-			mLinphoneCore.muteMic(enabled);
-			return enabled;
-        }
+//        if (mCore.inCall()) {
+//			boolean enabled = !mCore.();
+//			mCore.muteMic(enabled);
+//			return enabled;
+//        }
         return false;
     }
 
-    public void enableCamera(LinphoneCall call, boolean enable) {
+    public void enableCamera(Call call, boolean enable) {
         if (call != null) {
             call.enableCamera(enable);
-		}
+        }
     }
 
     public void sendDtmf(char number) {
-		mLinphoneCore.sendDtmf(number);
+        mCore.getCurrentCall().sendDtmf(number);
     }
 
-	public void updateCall() {
-		LinphoneCore lc = mLinphoneCore;
-		LinphoneCall lCall = lc.getCurrentCall();
-		if (lCall == null) {
-			Log.e(new Object[]{"Trying to updateCall while not in call: doing nothing"});
-		} else {
-			LinphoneCallParams params = lCall.getCurrentParamsCopy();
-			lc.updateCall(lCall, (LinphoneCallParams) null);
-		}
-	}
-
-	@Override
-	public void globalState(LinphoneCore lc, GlobalState state, String message) {
-		Log.d("Global state: " + state + "(" + message + ")");
-	}
-
-	@Override
-	public void callState(LinphoneCore lc, LinphoneCall call, State cstate,
-			String message) {
-
-			if(cstate == State.Connected)
-			{
-				mMediaPlayer.stop();
-				mCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, "Connected"));
-			}
-			else if(cstate == State.IncomingReceived)
-			{
-				PluginResult plugin = new PluginResult(PluginResult.Status.OK,"Incoming");
-				plugin.setKeepCallback(true);
-                mCallbackContext.sendPluginResult(plugin);
-
-				mMediaPlayer = MediaPlayer.create(mContext, RingtoneManager.getActualDefaultRingtoneUri(mContext, RingtoneManager.TYPE_RINGTONE));
-				mMediaPlayer.start();
-			}
-			else if(cstate == State.CallEnd)
-			{
-				mMediaPlayer.stop();
-				mCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK,"End"));
-			}
-			else if(cstate == State.Error)
-			{
-				mCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK,"Error"));
-			}
-		Log.d("Call state: " + cstate + "(" + message + ")");
-	}
-
-	@Override
-	public void authInfoRequested(LinphoneCore linphoneCore, String s, String s1, String s2) {
-		Log.d("authInfoRequested");
-	}
-
-	@Override
-	public void authenticationRequested(LinphoneCore linphoneCore, LinphoneAuthInfo linphoneAuthInfo, LinphoneCore.AuthMethod authMethod) {
-		Log.d("authenticationRequested");
-	}
-
-	@Override
-	public void callStatsUpdated(LinphoneCore lc, LinphoneCall call,
-			LinphoneCallStats stats) {
-
-	}
-
-	@Override
-	public void callEncryptionChanged(LinphoneCore lc, LinphoneCall call,
-			boolean encrypted, String authenticationToken) {
-
-	}
-
-	@Override
-	public void registrationState(LinphoneCore lc, LinphoneProxyConfig cfg,
-			RegistrationState cstate, String smessage) {
-		if(cstate == RegistrationState.RegistrationOk)
-		{
-			mLoginCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK,"RegistrationSuccess"));
-
-		}
-		else if(cstate == RegistrationState.RegistrationFailed)
-		{
-			mLoginCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK,"RegistrationFailed"));
-		}
-	}
-
-	@Override
-	public void newSubscriptionRequest(LinphoneCore lc, LinphoneFriend lf,
-			String url) {
-
-	}
-
-	@Override
-	public void notifyPresenceReceived(LinphoneCore lc, LinphoneFriend lf) {
-		Log.d("notifyPresenceReceived");
-	}
-
-	@Override
-	public void messageReceived(LinphoneCore lc, LinphoneChatRoom cr,
-			LinphoneChatMessage message) {
-		Log.d("Message received from " + cr.getPeerAddress().asString() + " : " + message.getText() + "(" + message.getExternalBodyUrl() + ")");
-	}
-
-	@Override
-	public void messageReceivedUnableToDecrypted(LinphoneCore linphoneCore, LinphoneChatRoom linphoneChatRoom, LinphoneChatMessage linphoneChatMessage) {
-		Log.d("messageReceivedUnableToDecrypted");
-	}
-
-	@Override
-	public void isComposingReceived(LinphoneCore lc, LinphoneChatRoom cr) {
-		Log.d("Composing received from " + cr.getPeerAddress().asString());
-	}
-
-	@Override
-	public void dtmfReceived(LinphoneCore lc, LinphoneCall call, int dtmf) {
-
-	}
-
-	@Override
-	public void ecCalibrationStatus(LinphoneCore lc, EcCalibratorStatus status,
-			int delay_ms, Object data) {
-
-	}
-
-	@Override
-	public void uploadProgressIndication(LinphoneCore linphoneCore, int i, int i1) {
-
-	}
-
-	@Override
-	public void uploadStateChanged(LinphoneCore linphoneCore, LinphoneCore.LogCollectionUploadState logCollectionUploadState, String s) {
-
-	}
-
-	@Override
-	public void friendListCreated(LinphoneCore linphoneCore, LinphoneFriendList linphoneFriendList) {
-
-	}
-
-	@Override
-	public void friendListRemoved(LinphoneCore linphoneCore, LinphoneFriendList linphoneFriendList) {
-
-	}
-
-	@Override
-	public void networkReachableChanged(LinphoneCore linphoneCore, boolean b) {
-
-	}
-
-	@Override
-	public void notifyReceived(LinphoneCore lc, LinphoneCall call,
-			LinphoneAddress from, byte[] event) {
-
-	}
-
-	@Override
-	public void transferState(LinphoneCore lc, LinphoneCall call,
-			State new_call_state) {
-
-	}
-
-	@Override
-	public void infoReceived(LinphoneCore lc, LinphoneCall call,
-			LinphoneInfoMessage info) {
-
-	}
-
-	@Override
-	public void subscriptionStateChanged(LinphoneCore lc, LinphoneEvent ev,
-			SubscriptionState state) {
-
-	}
-
-	@Override
-	public void notifyReceived(LinphoneCore lc, LinphoneEvent ev,
-			String eventName, LinphoneContent content) {
-		Log.d("Notify received: " + eventName + " -> " + content.getDataAsString());
-	}
-
-	@Override
-	public void publishStateChanged(LinphoneCore lc, LinphoneEvent ev,
-			PublishState state) {
-
-	}
-
-	@Override
-	public void configuringStatus(LinphoneCore lc,
-			RemoteProvisioningState state, String message) {
-		Log.d("Configuration state: " + state + "(" + message + ")");
-	}
-
-	@Override
-	public void show(LinphoneCore lc) {
-
-	}
-
-	@Override
-	public void displayStatus(LinphoneCore lc, String message) {
-
-	}
-
-	@Override
-	public void displayMessage(LinphoneCore lc, String message) {
-
-	}
-
-	@Override
-	public void displayWarning(LinphoneCore lc, String message) {
-
-	}
-
-	@Override
-	public void fileTransferProgressIndication(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, int i) {
-
-	}
-
-	@Override
-	public void fileTransferRecv(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, byte[] bytes, int i) {
-
-	}
-
-	@Override
-	public int fileTransferSend(LinphoneCore linphoneCore, LinphoneChatMessage linphoneChatMessage, LinphoneContent linphoneContent, ByteBuffer byteBuffer, int i) {
-		return 0;
-	}
-
-	public void listenCall(CallbackContext callbackContext){
-		mCallbackContext = callbackContext;
-	}
-
-	public void acceptCall(CallbackContext callbackContext) {
-		mCallbackContext = callbackContext;
-        LinphoneCall call = mLinphoneCore.getCurrentCall();
-        try {
-            mLinphoneCore.acceptCall(call);
-        } catch (LinphoneCoreException e) {
-            e.printStackTrace();
+    public void updateCall() {
+        Core lc = mCore;
+        Call lCall = lc.getCurrentCall();
+        if (lCall == null) {
+            Log.e(new Object[]{"Trying to updateCall while not in call: doing nothing"});
+        } else {
+            CallParams params = lCall.getParams();
+            lc.getCurrentCall().setParams(params);
         }
-	}
+    }
 
-	public void call(String address, String displayName, CallbackContext callbackContext) {
+    public void listenCall(CallbackContext callbackContext) {
+        mCallbackContext = callbackContext;
+    }
 
-		mCallbackContext = callbackContext;
-		newOutgoingCall(address, displayName);
-	}
+    public void listenLogin(CallbackContext callbackContext) {
+        mLoginCallbackContext = callbackContext;
+    }
 
-	public void hangup(CallbackContext callbackContext) {
-		terminateCall();
-	}
+    public void ensureRegistered(){
+        Core lc = mCore;
+        lc.ensureRegistered();
+    }
 
-	public void login(String username, String password, String domain, CallbackContext callbackContext) {
-		try {
+    public void setStunServer(String stunServer) {
+        ProxyConfig mProxyConfig = mCore.getDefaultProxyConfig();
+        if (mProxyConfig == null) {
+            return;
+        }
+        mProxyConfig.edit();
+        NatPolicy natPolicy = mProxyConfig.getNatPolicy();
+        if (natPolicy == null) {
+            natPolicy = mCore.createNatPolicy();
+            mProxyConfig.setNatPolicy(natPolicy);
+        }
+        if (natPolicy != null) {
+            natPolicy.setStunServer(stunServer);
+            natPolicy.enableStun(true);
+        }
+        mProxyConfig.done();
+    }
 
-			LinphoneCoreFactory lcFactory = LinphoneCoreFactory.instance();
+    public void disableStunServer() {
+        ProxyConfig mProxyConfig = mCore.getDefaultProxyConfig();
+        mProxyConfig.edit();
+        NatPolicy natPolicy = mProxyConfig.getNatPolicy();
+        if (natPolicy == null) {
+            natPolicy = mCore.createNatPolicy();
+            mProxyConfig.setNatPolicy(natPolicy);
+        }
+        if (natPolicy != null) {
+            natPolicy.enableStun(false);
+        }
+        mProxyConfig.done();
+    }
+
+    public void acceptCall() {
+        Call call = mCore.getCurrentCall();
+        if (call != null){
+            CallParams params = call.getParams();
+            params.enableVideo(true);
+            params.enableAudio(true);
+            mCore.acceptCallWithParams(call, params);
+        }
+    }
+
+    public void previewCall() {
+        Call call = mCore.getCurrentCall();
+        if (call != null){
+            String agent = call.getRemoteUserAgent();
+
+            android.util.Log.e(TAG, "agent: " + agent);
+
+            if (agent.matches("(.*)Rubetek(.*)")) {
+                android.util.Log.e(TAG, "agent: RUBETEK CALL");
+                CallParams params = call.getParams();
+                params.enableVideo(true);
+                params.enableAudio(false);
+                call.acceptEarlyMediaWithParams(params);
+            } else {
+                CallParams params = call.getParams();
+                params.enableVideo(true);
+                call.acceptEarlyMediaWithParams(params);
+                params.enableAudio(false);
+                call.setParams(params);
+            }
+        }
+    }
+
+    public void call(String address, String displayName) {
+        newOutgoingCall(address, displayName);
+    }
+
+    public void hangup() {
+        terminateCall();
+    }
+
+    public boolean loginFromStorage() {
+        String username = mStorage.getUsername();
+
+        android.util.Log.i(TAG, "[Mini manager] login from storage " + username);
+
+        if (username != "") {
+            android.util.Log.i(TAG, "[Mini manager] logining from storage");
+
+            login(username, mStorage.getPassword(), mStorage.getDomain());
+
+            String stun = mStorage.getStun();
+
+            if (stun != "") {
+                setStunServer(stun);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public void saveAuth(String username, String password, String domain) {
+        mStorage.setUsername(username);
+        mStorage.setPassword(password);
+        mStorage.setDomain(domain);
+    }
+
+    public void saveStunServer(String stun) {
+        mStorage.setStun(stun);
+    }
+
+    public void clearRegistration() {
+        mCore.clearAllAuthInfo();
+        mCore.clearProxyConfig();
+    }
+
+    public void login(String username, String password, String domain) {
+        clearRegistration();
+
+        Factory lcFactory = Factory.instance();
+
+        Transports transports = mCore.getTransports();
+        transports.setUdpPort(SIP_PORT);
+        transports.setTcpPort(SIP_PORT);
+        transports.setTlsPort(RANDOM_PORT);
+        mCore.setTransports(transports);
+
+        android.util.Log.d(TAG, "auth full: " + username + " " + password + " " + domain);
+
+        Address address = lcFactory.createAddress("sip:" + username);
+
+        Address proxyAddress = lcFactory.createAddress("sip:" + domain);
+
+        Integer port = proxyAddress.getPort();
+
+        android.util.Log.d(TAG, "proxyAddress: " + proxyAddress.asStringUriOnly());
+
+        if (password != null) {
+            mCore.addAuthInfo(lcFactory.createAuthInfo(address.getUsername(), address.getUsername(), password, (String)null, (String)null, address.getDomain()));
+        }
+
+        ProxyConfig proxyCfg = mCore.createProxyConfig();
+        proxyCfg.edit();
+        proxyCfg.setIdentityAddress(address);
+        proxyCfg.setServerAddr(proxyAddress.asStringUriOnly());
+        proxyCfg.done();
+
+        if (port != 0) {
+            proxyCfg.setRoute(proxyAddress.getDomain() + ':' + port);
+        }
+
+        android.util.Log.d(TAG, "auth: " + address.getUsername() + " " + password + " " + address.getDomain() + " - " + proxyAddress.asStringUriOnly());
+
+        proxyCfg.enableRegister(true);
+        mCore.addProxyConfig(proxyCfg);
+        mCore.setDefaultProxyConfig(proxyCfg);
+
+        flToken = true;
+
+        android.util.Log.d(TAG, "logined");
+    }
+
+    private NatPolicy getOrCreateNatPolicy() {
+        NatPolicy nat = mCore.getNatPolicy();
+
+        if (nat == null) {
+            nat = getLc().createNatPolicy();
+        }
+
+        return nat;
+    }
+
+    public void logout() {
+        ProxyConfig[] prxCfgs = mCore.getProxyConfigList();
+        if (prxCfgs.length > 0) {
+            final ProxyConfig proxyCfg = prxCfgs[0];
+            mCore.removeProxyConfig(proxyCfg);
+            android.util.Log.d(TAG, "logouted");
+        }
+    }
+
+    @Override
+    public void onGlobalStateChanged(Core core, GlobalState globalState, String s) {
+        android.util.Log.d(TAG,"Global state changed");
+        android.util.Log.d(TAG,globalState.name());
+        android.util.Log.d(TAG,s);
+    }
+
+    @Override
+    public void onRegistrationStateChanged(Core core, ProxyConfig proxyConfig, RegistrationState registrationState, String s) {
+        if (registrationState == RegistrationState.Ok) {
+            android.util.Log.d(TAG, "RegistrationSuccess");
+
+            if (flToken) {
+                mPrefs.setPushNotificationEnabled(true);
+                flToken = false;
+            }
+        } else if (registrationState == RegistrationState.Failed) {
+            android.util.Log.d(TAG, "RegistrationFailed:: " + s);
+        } else if (registrationState == RegistrationState.Cleared) {
+            android.util.Log.d(TAG, "RegistrationCleared:: " + s);
+        } else if (registrationState == RegistrationState.None) {
+            android.util.Log.d(TAG, "RegistrationNone:: " + s);
+        }
+
+        if (mLoginCallbackContext != null) {
+            if (registrationState == RegistrationState.Ok) {
+                mLoginCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, "RegistrationSuccess"));
+            } else if (registrationState == RegistrationState.Failed) {
+                mLoginCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, "RegistrationFailed:: " + s));
+            } else if (registrationState == RegistrationState.Cleared) {
+                android.util.Log.d(TAG, "RegistrationCleared:: " + s);
+            } else if (registrationState == RegistrationState.None) {
+                android.util.Log.d(TAG, "RegistrationNone:: " + s);
+            }
+        }
+    }
+
+    @Override
+    public void onCallStateChanged(Core core, Call call, State state, String s) {
+        android.util.Log.d(TAG, "-------------- onCallStateChanged -------------");
+
+        if (state == State.Connected) {
+            android.util.Log.d(TAG, "StateChanged Connected");
+            mVibrator.cancel();
+        } else if (state == State.IncomingReceived) {
+            LinphoneContext.instance().openIncall();
+            android.util.Log.d(TAG, "StateChanged Incoming");
+
+            if (mAudioManager.getRingerMode() != AudioManager.RINGER_MODE_SILENT) {
+                long[] patern = {0, 1000, 1000};
+                mVibrator.vibrate(patern, 1);
+            }
+
+            mAudioManager.setMode(AudioManager.MODE_IN_CALL);
+            mAudioManager.setSpeakerphoneOn(true);
+
+            LinphoneContext.isCall = true;
+            LinphoneContext.instance().showNotification();
+        } else if (state == State.End) {
+            mVibrator.cancel();
+
+            if (callActivity != null) {
+                callActivity.finish();
+            }
+
+            android.util.Log.d(TAG, "StateChanged End");
+
+            LinphoneContext.isCall = false;
+            LinphoneContext.instance().showNotification();
+        } else if (state == State.Error) {
+            mVibrator.cancel();
+
+            if (callActivity != null) {
+                callActivity.finish();
+            }
 
 
-			LinphoneAddress address = lcFactory.createLinphoneAddress("sip:" + username + "@" + domain);
-			username = address.getUserName();
-			domain = address.getDomain();
-			if(password != null) {
-				mLinphoneCore.addAuthInfo(lcFactory.createAuthInfo(username, password, (String)null, domain));
-			}
+            LinphoneContext.isCall = false;
+            LinphoneContext.instance().showNotification();
 
+            android.util.Log.d(TAG, "StateChanged Error");
+        }
 
-			LinphoneProxyConfig proxyCfg = mLinphoneCore.createProxyConfig("sip:" + username + "@" + domain, domain, (String)null, true);
+        if (mCallbackContext != null) {
+            if (state == State.Connected) {
+                mCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, "Connected"));
+            } else if (state == State.IncomingReceived) {
+                mCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, "Incoming"));
+            } else if (state == State.End) {
+                mCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, "End"));
+            } else if (state == State.Error) {
+                mCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.OK, "Error"));
 
-			proxyCfg.enableRegister(true);
-			mLinphoneCore.addProxyConfig(proxyCfg);
-			mLinphoneCore.setDefaultProxyConfig(proxyCfg);
+            }
+        }
 
+        android.util.Log.d(TAG, "Call state: " + state + "(" + s + ")");
 
+    }
 
+    @Override
+    public void onNotifyPresenceReceived(Core core, Friend friend) {
 
-			mLoginCallbackContext = callbackContext;
+    }
 
+    @Override
+    public void onNotifyPresenceReceivedForUriOrTel(Core core, Friend friend, String s, PresenceModel presenceModel) {
 
+    }
 
-			//builder.saveNewAccount();
-		} catch (LinphoneCoreException e) {
-			e.printStackTrace();
-		}
-	}
+    @Override
+    public void onNewSubscriptionRequested(Core core, Friend friend, String s) {
 
+    }
+
+    @Override
+    public void onAuthenticationRequested(Core core, AuthInfo authInfo, AuthMethod authMethod) {
+        android.util.Log.d(TAG, "Authentication requested");
+    }
+
+    @Override
+    public void onCallLogUpdated(Core core, CallLog callLog) {
+        android.util.Log.d(TAG, "Call log updated"+callLog.toStr());
+    }
+
+    @Override
+    public void onMessageReceived(Core core, ChatRoom chatRoom, ChatMessage chatMessage) {
+
+    }
+
+    @Override
+    public void onMessageReceivedUnableDecrypt(Core core, ChatRoom chatRoom, ChatMessage chatMessage) {
+
+    }
+
+    @Override
+    public void onIsComposingReceived(Core core, ChatRoom chatRoom) {
+
+    }
+
+    @Override
+    public void onDtmfReceived(Core core, Call call, int i) {
+        android.util.Log.d(TAG, "DTMF RECEIVED");
+    }
+
+    @Override
+    public void onReferReceived(Core core, String s) {
+
+    }
+
+    @Override
+    public void onCallEncryptionChanged(Core core, Call call, boolean b, String s) {
+
+    }
+
+    @Override
+    public void onTransferStateChanged(Core core, Call call, State state) {
+
+    }
+
+    @Override
+    public void onBuddyInfoUpdated(Core core, Friend friend) {
+
+    }
+
+    @Override
+    public void onCallStatsUpdated(Core core, Call call, CallStats callStats) {
+        android.util.Log.d(TAG, "Call stats updated:: Download bandwidth :: "+callStats.getDownloadBandwidth());
+    }
+
+    @Override
+    public void onInfoReceived(Core core, Call call, InfoMessage infoMessage) {
+        android.util.Log.d(TAG, "Info message received :: "+infoMessage.getContent().getStringBuffer());
+    }
+
+    @Override
+    public void onSubscriptionStateChanged(Core core, Event event, SubscriptionState subscriptionState) {
+        android.util.Log.d(TAG, "Subscription state changed :: "+subscriptionState.name());
+    }
+
+    @Override
+    public void onNotifyReceived(Core core, Event event, String s, Content content) {
+
+    }
+
+    @Override
+    public void onSubscribeReceived(Core core, Event event, String s, Content content) {
+
+    }
+
+    @Override
+    public void onPublishStateChanged(Core core, Event event, PublishState publishState) {
+
+    }
+
+    @Override
+    public void onConfiguringStatus(Core core, ConfiguringState configuringState, String s) {
+        if (configuringState == ConfiguringState.Successful) {
+            android.util.Log.i(TAG,"[Context] Configuring state is Successful");
+        } else if (configuringState == ConfiguringState.Failed) {
+            android.util.Log.i(TAG,"[Context] Configuring state is Failed");
+        } else if (configuringState == ConfiguringState.Skipped) {
+            android.util.Log.i(TAG,"[Context] Configuring state is Skipped");
+        }
+    }
+
+    @Override
+    public void onNetworkReachable(Core core, boolean b) {
+        android.util.Log.d(TAG, "Is network reachable?? " + b);
+    }
+
+    @Override
+    public void onLogCollectionUploadStateChanged(Core core, Core.LogCollectionUploadState logCollectionUploadState, String s) {
+
+    }
+
+    @Override
+    public void onLogCollectionUploadProgressIndication(Core core, int i, int i1) {
+
+    }
+
+    @Override
+    public void onFriendListCreated(Core core, FriendList friendList) {
+
+    }
+
+    @Override
+    public void onFriendListRemoved(Core core, FriendList friendList) {
+
+    }
+
+    @Override
+    public void onCallCreated(Core core, Call call) {
+
+    }
+
+    @Override
+    public void onVersionUpdateCheckResultReceived(Core core, VersionUpdateCheckResult versionUpdateCheckResult, String s, String s1) {
+
+    }
+
+    @Override
+    public void onChatRoomStateChanged(Core core, ChatRoom chatRoom, ChatRoom.State state) {
+
+    }
+
+    @Override
+    public void onQrcodeFound(Core core, String s) {
+
+    }
+
+    @Override
+    public void onEcCalibrationResult(Core core, EcCalibratorStatus ecCalibratorStatus, int i) {
+
+    }
+
+    @Override
+    public void onEcCalibrationAudioInit(Core core) {
+
+    }
+
+    @Override
+    public void onEcCalibrationAudioUninit(Core core) {
+
+    }
 }
 
 

@@ -18,54 +18,91 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
+
 import android.app.Activity;
+import android.app.KeyguardManager;
+import android.content.Context;
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
-import android.content.res.Configuration;
 import android.content.res.Resources;
-import android.media.AudioManager;
+import android.graphics.Color;
 import android.opengl.GLSurfaceView;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.View.OnClickListener;
+import android.view.WindowManager;
+import android.view.animation.AlphaAnimation;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
+import android.widget.RelativeLayout;
 
-import org.linphone.core.LinphoneCore;
+import org.linphone.core.Call;
+import org.linphone.core.CallParams;
+import org.linphone.core.Core;
+import org.linphone.core.Reason;
 import org.linphone.mediastream.Log;
 import org.linphone.mediastream.video.AndroidVideoWindowImpl;
-import org.linphone.mediastream.video.capture.hwconf.AndroidCameraConfiguration;
+
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * @author Sylvain Berfini
  */
-public class LinphoneMiniActivity extends Activity implements OnClickListener{
-	private SurfaceView mVideoView;
-	private SurfaceView mCaptureView;
-	private AndroidVideoWindowImpl androidVideoWindowImpl;
-	private AudioManager mAudioManager;
-    private Resources R;
-    private String packageName;
+public class LinphoneMiniActivity extends Activity {
+    private SurfaceView mVideoView;
+    private SurfaceView mCaptureView;
+    private AndroidVideoWindowImpl androidVideoWindowImpl;
+    private Button answerButton;
+    private Button unlockButton;
+    private Animation answerAnim;
+    private Animation unlockAnim;
+    private Timer unlockTimer;
 
-	@Override
-	protected void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        // getIntent() should always return the most recent
+        setIntent(intent);
+    }
 
-        R = this.getResources();
-        packageName = this.getPackageName();
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+	    super.onCreate(savedInstanceState);
 
-        setContentView(R.getIdentifier("incall", "layout", packageName));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true);
+            setTurnScreenOn(true);
 
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-        if(this.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE){
-            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+            KeyguardManager keyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+
+            if (keyguardManager != null) {
+                keyguardManager.requestDismissKeyguard(this, null);
+            }
+        } else {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD |
+                    WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED |
+                    WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         }
 
+        Resources R = getApplication().getResources();
+        String packageName = getApplication().getPackageName();
+
+        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
         setContentView(R.getIdentifier("incall", "layout", packageName));
 
-        mVideoView = (SurfaceView) findViewById(R.getIdentifier("videoSurface", "id", packageName));
-        mCaptureView = (SurfaceView) findViewById(R.getIdentifier("videoCaptureSurface", "id", packageName));
+        RelativeLayout bgElement = findViewById(R.getIdentifier("topLayout", "id", packageName));
+        bgElement.setBackgroundColor(Color.WHITE);
+
+        answerButton = findViewById(R.getIdentifier("answerButton", "id", packageName));
+
+        mVideoView = findViewById(R.getIdentifier("videoSurface", "id", packageName));
+
+        mCaptureView = findViewById(R.getIdentifier("videoCaptureSurface", "id", packageName));
+        mCaptureView.setVisibility(View.INVISIBLE);
         mCaptureView.getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
 
         fixZOrder(mVideoView, mCaptureView);
@@ -73,43 +110,95 @@ public class LinphoneMiniActivity extends Activity implements OnClickListener{
         androidVideoWindowImpl = new AndroidVideoWindowImpl(mVideoView, mCaptureView, new AndroidVideoWindowImpl.VideoWindowListener() {
             public void onVideoRenderingSurfaceReady(AndroidVideoWindowImpl vw, SurfaceView surface) {
                 Log.d("onVideoRenderingSurfaceReady");
-                Linphone.mInstance.mLinphoneCore.setVideoWindow(vw);
+                Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
+                if (lc != null) {
+                    Call c = lc.getCurrentCall();
+                    if(c != null){
+                        c.setNativeVideoWindowId(vw);
+                    }
+                }
                 mVideoView = surface;
             }
 
             public void onVideoRenderingSurfaceDestroyed(AndroidVideoWindowImpl vw) {
                 Log.d("onVideoRenderingSurfaceDestroyed");
-                LinphoneCore lc = Linphone.mInstance.mLinphoneCore;
+                Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
                 if (lc != null) {
-                    lc.setVideoWindow(null);
+                    Call c = lc.getCurrentCall();
+                    if(c != null){
+                        c.setNativeVideoWindowId(null);
+                    }
                 }
             }
 
             public void onVideoPreviewSurfaceReady(AndroidVideoWindowImpl vw, SurfaceView surface) {
                 Log.d("onVideoPreviewSurfaceReady");
                 mCaptureView = surface;
-                Linphone.mInstance.mLinphoneCore.setPreviewWindow(mCaptureView);
+                LinphoneContext.instance().mLinphoneManager.getLc().setNativePreviewWindowId(mCaptureView);
+
             }
 
             public void onVideoPreviewSurfaceDestroyed(AndroidVideoWindowImpl vw) {
                 Log.d("onVideoPreviewSurfaceDestroyed");
                 // Remove references kept in jni code and restart camera
-                Linphone.mInstance.mLinphoneCore.setPreviewWindow(null);
+                LinphoneContext.instance().mLinphoneManager.getLc().setNativePreviewWindowId(null);
             }
         });
+
+        answerAnim = AnimationUtils.loadAnimation(this, R.getIdentifier("alpha", "anim", packageName));
+        answerAnim.setFillAfter(true);
+
+        unlockAnim = AnimationUtils.loadAnimation(this, R.getIdentifier("alpha_reverse", "anim", packageName));
+
+        unlockButton = (Button) findViewById(R.getIdentifier("unlockButton", "id", packageName));
+
+        //float alpha = 0.1f;
+        //AlphaAnimation alphaUp = new AlphaAnimation(alpha, alpha);
+        //alphaUp.setFillAfter(true);
+        //unlockButton.setEnabled(false);
+        //unlockButton.startAnimation(alphaUp);
+
+/*
+        unlockButton.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
+                if (lc != null) {
+                    Call call = lc.getCurrentCall();
+                    if (call != null) {
+                        int action = event.getAction();
+                        switch (action) {
+                            case MotionEvent.ACTION_DOWN:
+                                v.startAnimation(unlockAnim);
+                                call.sendDtmfs("12#");
+                                android.util.Log.d("LinphoneSip", "sending Dtmfs");
+                                break;
+                            case MotionEvent.ACTION_UP:
+                                call.cancelDtmfs();
+                                android.util.Log.d("LinphoneSip", "cancel Dtmfs");
+                                break;
+                        }
+                    }
+                }
+
+                return true;
+            }
+        });
+*/
 
         Intent i = getIntent();
         Bundle extras = i.getExtras();
         String address = extras.getString("address");
         String displayName = extras.getString("displayName");
 
-        int videoDeviceId = Linphone.mInstance.mLinphoneCore.getVideoDevice();
-        videoDeviceId = (videoDeviceId + 1) % AndroidCameraConfiguration.retrieveCameras().length;
-        Linphone.mInstance.mLinphoneCore.setVideoDevice(videoDeviceId);
-        mAudioManager = ((AudioManager) Linphone.mInstance.mContext.getSystemService(Linphone.mInstance.mContext.AUDIO_SERVICE));
-        mAudioManager.setMode(AudioManager.MODE_IN_CALL);
-        mAudioManager.setSpeakerphoneOn(false);
-	}
+        String videoDeviceId = LinphoneContext.instance().mLinphoneManager.getLc().getVideoDevice();
+        LinphoneContext.instance().mLinphoneManager.getLc().setVideoDevice(videoDeviceId);
+        //if (address != "") {
+            // Linphone.mLinphoneManager.newOutgoingCall(address, displayName);
+        //}
+
+        LinphoneMiniManager.getInstance().callActivity = this;
+    }
 
     private void fixZOrder(SurfaceView video, SurfaceView preview) {
         video.setZOrderOnTop(false);
@@ -117,26 +206,72 @@ public class LinphoneMiniActivity extends Activity implements OnClickListener{
         preview.setZOrderMediaOverlay(true); // Needed to be able to display control layout over
     }
 
-    public void switchCamera() {
-        try {
-            int videoDeviceId = Linphone.mInstance.mLinphoneCore.getVideoDevice();
-            videoDeviceId = (videoDeviceId + 1) % AndroidCameraConfiguration.retrieveCameras().length;
-            Linphone.mInstance.mLinphoneCore.setVideoDevice(videoDeviceId);
-            Linphone.mInstance.mLinphoneManager.updateCall();
+    public void butAnswer(View v) {
+        Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
+        if (lc != null) {
+            Call call = lc.getCurrentCall();
+            if (call != null) {
+                v.startAnimation(answerAnim);
 
-            // previous call will cause graph reconstruction -> regive preview
-            // window
-            if (mCaptureView != null) {
-                Linphone.mInstance.mLinphoneCore.setPreviewWindow(mCaptureView);
+                CallParams params = call.getParams();
+                params.enableVideo(true);
+                params.enableAudio(true);
+                call.acceptWithParams(params);
+                call.acceptUpdate(params);
+                call.setParams(params);
+
+                answerButton.setEnabled(false);
+
+                float alpha = 1f;
+                AlphaAnimation alphaUp = new AlphaAnimation(alpha, alpha);
+                alphaUp.setFillAfter(true);
+                //unlockButton.setEnabled(false);
+                //unlockButton.startAnimation(alphaUp);
+
+                //unlockButton.setEnabled(true);
+
+                LinphoneContext.answered = true;
             }
-        } catch (ArithmeticException ae) {
-            Log.e("Cannot switch camera : no camera");
         }
     }
 
-	@Override
-	protected void onResume() {
-		super.onResume();
+    public void rejectAnswer(View v) {
+        onBackPressed();
+    }
+
+    public void butUnlock(View v) {
+        if (unlockTimer != null) {
+            return;
+        }
+
+        Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
+        if (lc != null) {
+            Call call = lc.getCurrentCall();
+            if (call != null) {
+                v.startAnimation(unlockAnim);
+                call.sendDtmfs("12#");
+                android.util.Log.d("LinphoneSip", "sending Dtmfs");
+
+                TimerTask lTask = new TimerTask() {
+                    @Override
+                    public void run() {
+                        call.cancelDtmfs();
+                        unlockTimer.cancel();
+                        unlockTimer = null;
+
+                        android.util.Log.d("LinphoneSip", "stop Dtmfs");
+                    }
+                };
+
+                unlockTimer = new Timer("Dtmfs scheduler");
+                unlockTimer.schedule(lTask, 1600);
+            }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+	    super.onResume();
 
         if (mVideoView != null) {
             ((GLSurfaceView) mVideoView).onResume();
@@ -144,21 +279,32 @@ public class LinphoneMiniActivity extends Activity implements OnClickListener{
 
         if (androidVideoWindowImpl != null) {
             synchronized (androidVideoWindowImpl) {
-                Linphone.mInstance.mLinphoneCore.setVideoWindow(androidVideoWindowImpl);
+                Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
+                if (lc != null) {
+                    Call c = lc.getCurrentCall();
+                    if (c != null) {
+                        c.setNativeVideoWindowId(androidVideoWindowImpl);
+                    }
+                }
             }
         }
-
     }
 
-	@Override
-	protected void onPause() {
+    @Override
+    protected void onPause() {
         if (androidVideoWindowImpl != null) {
             synchronized (androidVideoWindowImpl) {
-				/*
-				 * this call will destroy native opengl renderer which is used by
-				 * androidVideoWindowImpl
-				 */
-                Linphone.mInstance.mLinphoneCore.setVideoWindow(null);
+		/*
+		 * this call will destroy native opengl renderer which is used by
+		 * androidVideoWindowImpl
+		 */
+                Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
+                if (lc != null) {
+                    Call c = lc.getCurrentCall();
+                    if (c != null){
+                        c.setNativeVideoWindowId(null);
+                    }
+                }
             }
         }
 
@@ -166,41 +312,50 @@ public class LinphoneMiniActivity extends Activity implements OnClickListener{
             ((GLSurfaceView) mVideoView).onPause();
         }
 
-		super.onPause();
-	}
+	    super.onPause();
+    }
 
-	@Override
-	protected void onDestroy() {
+    @Override
+    public void onBackPressed() {
+        Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
+
+        if (lc != null) {
+
+            Call c = lc.getCurrentCall();
+
+            if (c != null){
+                if (LinphoneContext.answered) {
+                    c.terminate();
+                } else {
+                    c.decline(Reason.NotAnswered);
+                }
+            }
+        }
+
+        super.onBackPressed();
+
+        LinphoneContext.instance().killCurrentApp();
+    }
+
+    @Override
+    protected void onDestroy() {
         mCaptureView = null;
+
         if (mVideoView != null) {
             mVideoView.setOnTouchListener(null);
             mVideoView = null;
         }
+
         if (androidVideoWindowImpl != null) {
             // Prevent linphone from crashing if correspondent hang up while you are rotating
             androidVideoWindowImpl.release();
             androidVideoWindowImpl = null;
         }
 
-		super.onDestroy();
-	}
+        LinphoneMiniManager.getInstance().callActivity = null;
 
-    @Override
-    public void onClick(View view) {
-    }
+	    super.onDestroy();
 
-    public void video_gua(View view)
-    {
-        Linphone.mInstance.mLinphoneCore.terminateCall(Linphone.mInstance.mLinphoneCore.getCurrentCall());
-        finish();
-    }
-
-    public void open_audio(View view)
-    {
-        mAudioManager.setMode(AudioManager.MODE_IN_CALL);
-        Boolean isopen = mAudioManager.isSpeakerphoneOn();
-        Button btn = findViewById(R.getIdentifier("id_open_audio", "id", packageName));
-        btn.setText(isopen ? "开启免提" : "关闭免提");
-        mAudioManager.setSpeakerphoneOn(isopen ? false : true);
+        LinphoneContext.instance().killCurrentApp();
     }
 }
