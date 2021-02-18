@@ -83,6 +83,7 @@
         </config-file>
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
             <activity android:name="com.sip.linphone.LinphoneMiniActivity" android:theme="@android:style/Theme.Black.NoTitleBar" />
+            <activity android:name="com.sip.linphone.LinphoneIncomeActivity" android:theme="@android:style/Theme.Black.NoTitleBar" />
         </config-file>
     </platform>
 
