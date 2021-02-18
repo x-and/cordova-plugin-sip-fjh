@@ -2,6 +2,8 @@
 #import <AudioToolbox/AudioToolbox.h>
 #include "linphone/linphonecore.h"
 
+#include "LinphoneManager.h"
+
 @interface Linphone : CDVPlugin{
     LinphoneCore *lc;
     LinphoneCall *call;
@@ -10,6 +12,7 @@
 @property (nonatomic) LinphoneCore *lc;
 @property (nonatomic) LinphoneCall *call;
 
+- (void)showCallView;
 - (void)acceptCall:(CDVInvokedUrlCommand*)command;
 - (void)listenCall:(CDVInvokedUrlCommand*)command;
 - (void)login:(CDVInvokedUrlCommand*)command;
