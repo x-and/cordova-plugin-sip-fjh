@@ -35,7 +35,7 @@ import androidx.annotation.NonNull;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.iid.FirebaseInstanceId;
-//import com.google.firebase.iid.InstanceIdResult;
+import com.google.firebase.iid.InstanceIdResult;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
@@ -183,28 +183,28 @@ public class LinphoneMiniManager implements CoreListener {
 
                 Log.i(
                         "[Push Notification] firebase push sender id ");
-//                try {
-//                    FirebaseInstanceId.getInstance()
-//                            .getInstanceId()
-//                            .addOnCompleteListener(
-//                                    new OnCompleteListener<InstanceIdResult>() {
-//                                        @Override
-//                                        public void onComplete(@NonNull Task<InstanceIdResult> task) {
-//                                            if (!task.isSuccessful()) {
-//                                                android.util.Log.e(TAG,
-//                                                        "[Push Notification] firebase getInstanceId failed: "
-//                                                                + task.getException());
-//                                                return;
-//                                            }
-//                                            String token = task.getResult().getToken();
-//                                            android.util.Log.i(TAG, "[Push Notification] firebase token is: " + token);
-//                                            LinphonePreferences.instance()
-//                                                    .setPushNotificationRegistrationID(token);
-//                                        }
-//                                    });
-//                } catch (Exception e) {
-//                    android.util.Log.e(TAG, "[Push Notification] firebase not available.");
-//                }
+                try {
+                    FirebaseInstanceId.getInstance()
+                            .getInstanceId()
+                            .addOnCompleteListener(
+                                    new OnCompleteListener<InstanceIdResult>() {
+                                        @Override
+                                        public void onComplete(@NonNull Task<InstanceIdResult> task) {
+                                            if (!task.isSuccessful()) {
+                                                android.util.Log.e(TAG,
+                                                        "[Push Notification] firebase getInstanceId failed: "
+                                                                + task.getException());
+                                                return;
+                                            }
+                                            String token = task.getResult().getToken();
+                                            android.util.Log.i(TAG, "[Push Notification] firebase token is: " + token);
+                                            LinphonePreferences.instance()
+                                                    .setPushNotificationRegistrationID(token);
+                                        }
+                                    });
+                } catch (Exception e) {
+                    android.util.Log.e(TAG, "[Push Notification] firebase not available.");
+                }
             }
         } catch (IOException e) {
             android.util.Log.d(TAG, "Error initializing Linphone");

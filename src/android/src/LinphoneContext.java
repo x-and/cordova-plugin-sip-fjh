@@ -32,15 +32,14 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import com.sevstar.app.beta.MainActivity;
-import com.sevstar.app.beta.R;
 
 public class LinphoneContext {
     private static final String TAG = "LinphoneSip";
     public static int ACTION_MANAGE_OVERLAY_PERMISSION_REQUEST_CODE = 2323;
     public static final int iconColor = 0xFF4A47EC;
 
-    public static final String CHANNEL_ID = "EvolifeSipService";
-    public static final String SERVICE_CHANNEL_ID = "EvolifeSipService";
+    public static final String CHANNEL_ID = "IntercomSipService";
+    public static final String SERVICE_CHANNEL_ID = "IntercomSipService";
     public static boolean channelInited = false;
     public static final int NOTIFICATION_ID = 45325623;
 
@@ -164,9 +163,10 @@ public class LinphoneContext {
     public void showNotification() {
         NotificationManager notificationManager = (NotificationManager) mContext.getSystemService(Context.NOTIFICATION_SERVICE);
 
+        if (!isConnected) return;
+
         notificationManager.notify(NOTIFICATION_ID, isCall ? getCallNotification(mContext) : getServiceNotification(mContext, isConnected));
         android.util.Log.d(TAG, "StateChanged " + (isCall ? "getCallNotification" : "getServiceNotification"));
-
     }
 
     public static Notification getServiceNotification(Context context, boolean connected) {
@@ -176,7 +176,7 @@ public class LinphoneContext {
         Notification.Builder builder =  new Notification.Builder(context)
                 .setContentTitle("Домофон")
                 .setContentText(connected ? "подключен" : "не подключен")
-                .setSmallIcon(R.drawable.icon)
+                .setSmallIcon(context.getResources().getIdentifier("ic_notification_large", "drawable", context.getPackageName()))
                 .setContentIntent(pendingIntent)
                 .setOnlyAlertOnce(true);
 
@@ -205,7 +205,7 @@ public class LinphoneContext {
         Notification.Builder builder = new Notification.Builder(context)
                 .setContentTitle("Домофон")
                 .setContentText("Входяший звонок домофона")
-                .setSmallIcon(R.drawable.icon)
+				.setSmallIcon(context.getResources().getIdentifier("ic_notification_large", "drawable", context.getPackageName()))
                 .setContentIntent(resultPendingIntent);
 
         if (Build.VERSION.SDK_INT >= 21) {
@@ -228,14 +228,14 @@ public class LinphoneContext {
 
             NotificationChannel serviceChannel = new NotificationChannel(
                     SERVICE_CHANNEL_ID,
-                    "Evo Life Service Channel",
+                    "IntercomChannel1",
                     NotificationManager.IMPORTANCE_MIN
             );
             manager.createNotificationChannel(serviceChannel);
 
             NotificationChannel callChannel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Evo Life Call Channel",
+                    "IntercomChannel2",
                     NotificationManager.IMPORTANCE_HIGH
             );
             manager.createNotificationChannel(callChannel);

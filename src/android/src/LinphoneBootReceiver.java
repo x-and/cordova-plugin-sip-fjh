@@ -3,6 +3,7 @@ package com.sip.linphone;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
 public class LinphoneBootReceiver extends BroadcastReceiver {
 
@@ -11,8 +12,9 @@ public class LinphoneBootReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent.getAction().equalsIgnoreCase(Intent.ACTION_SHUTDOWN)) {
-            android.util.Log.d(TAG, "[Boot Receiver] Device is shutting down, destroying Core to unregister");
+            Log.d(TAG, "[Boot Receiver] ACTION_SHUTDOWN");
         } else if (intent.getAction().equalsIgnoreCase(Intent.ACTION_BOOT_COMPLETED)) {
+            Log.d(TAG, "[Boot Receiver] ACTION_BOOT_COMPLETED");
             new LinphoneContext(context, true);
             LinphoneContext.instance().start(true);
 
@@ -25,7 +27,7 @@ public class LinphoneBootReceiver extends BroadcastReceiver {
                 LinphoneContext.instance().mLinphoneManager.mCore.refreshRegisters();
             }
         } else if (intent.getAction().equalsIgnoreCase(Intent.ACTION_MY_PACKAGE_REPLACED)) {
-
+            Log.d(TAG, "[Boot Receiver] ACTION_MY_PACKAGE_REPLACED");
         }
     }
 }

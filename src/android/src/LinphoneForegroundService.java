@@ -3,6 +3,7 @@ package com.sip.linphone;
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.annotation.Nullable;
 
@@ -24,6 +25,7 @@ public class LinphoneForegroundService extends Service {
 
     @Override
     public void onCreate() {
+    	Log.d(TAG, "[Foreground Service] onCreate");
         super.onCreate();
     }
 
@@ -32,20 +34,21 @@ public class LinphoneForegroundService extends Service {
         String action = ACTION_START_FOREGROUND_SERVICE;
 
         if (intent != null) {
-            android.util.Log.d(TAG, "[Foreground Service] NULL ACTION");
+            Log.d(TAG, "[Foreground Service] NULL ACTION");
             action = intent.getAction();
         }
 
         switch (action) {
             case ACTION_STOP_FOREGROUND_SERVICE:
+				Log.d(TAG, "[Foreground Service] onStartCommand stop");
                 stopForegroundService();
                 break;
 
             case ACTION_START_FOREGROUND_SERVICE:
-                android.util.Log.d(TAG, "run service " + (LinphoneContext.isReady() ? "isReady" : "no"));
+				Log.d(TAG, "[Foreground Service] onStartCommand start " + (LinphoneContext.isReady() ? "isReady" : "no"));
 
                 if (!LinphoneContext.isReady()) {
-                    android.util.Log.e(TAG, "[Foreground Service] Starting context");
+                    Log.w(TAG, "[Foreground Service] Starting context");
                     new LinphoneContext(getApplicationContext(), true);
                     LinphoneContext.instance().start(true);
                 }
@@ -55,7 +58,7 @@ public class LinphoneForegroundService extends Service {
                 mListener = new CoreListenerStub() {
                     @Override
                     public void onRegistrationStateChanged(final Core core, final ProxyConfig proxy, final RegistrationState state, String smessage) {
-						android.util.Log.d(TAG, "STATE " + state.toString());
+						Log.d(TAG, "STATE " + state.toString());
 						if (state != RegistrationState.Progress && (prevState == null || prevState != state)) {
 							android.util.Log.d(TAG, "update notification " + (prevState != null ? prevState.toString() : "null") + " - " + state.toString());
 
@@ -99,8 +102,8 @@ public class LinphoneForegroundService extends Service {
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         super.onTaskRemoved(rootIntent);
-
-        //stopForegroundService();
+		Log.d(TAG, "[Foreground Service] onTaskRemoved");
+        stopForegroundService();
 
         if (!LinphoneContext.isReady()) {
             android.util.Log.e(TAG, "[Foreground Service] Starting context");
@@ -113,7 +116,7 @@ public class LinphoneForegroundService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-
+		Log.d(TAG, "[Foreground Service] onDestroy");
         if (LinphoneMiniManager.mCore != null) {
             LinphoneMiniManager.mCore.removeListener(mListener);
         }
@@ -126,16 +129,14 @@ public class LinphoneForegroundService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        android.util.Log.d(TAG, "bind service");
+        Log.d(TAG, "[Foreground Service] onBind");
         return null;
     }
 
-    private void stopForegroundService()
-    {
-        android.util.Log.d(TAG, "Stop foreground service.");
+    private void stopForegroundService() {
+        Log.d(TAG, "[Foreground Service] stopForegroundService");
 
         stopForeground(true);
         stopSelf();
     }
-
 }

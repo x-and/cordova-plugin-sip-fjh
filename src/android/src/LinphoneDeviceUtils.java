@@ -1,9 +1,11 @@
 package com.sip.linphone;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
@@ -17,6 +19,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
+import org.apache.cordova.CordovaPlugin;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -118,7 +121,7 @@ public class LinphoneDeviceUtils {
         return getDevicePowerManagerIntent(context) != null;
     }
 
-    public static void displayDialogIfDeviceHasPowerManagerThatCouldPreventPushNotifications(final Resources R, final Context context) {
+    public static void displayDialogIfDeviceHasPowerManagerThatCouldPreventPushNotifications(final Context context) {
         if (LinphonePreferences.instance().hasPowerSaverDialogBeenPrompted()) {
             return;
         }
@@ -132,7 +135,8 @@ public class LinphoneDeviceUtils {
                         " device with power saver detected: " +
                         intent.getComponent().getClassName());
                 Log.w("LinphoneDeviceUtils", "[Hacks] Asking power saver for whitelist !");
-/*
+
+
                 String name = "Настройки";
 
                 try {
@@ -143,87 +147,77 @@ public class LinphoneDeviceUtils {
                     name = (String) (app != null ? context.getPackageManager().getApplicationLabel(app) : "");
 
                     android.util.Log.d("DeviceUtils", name);
-                } catch (NameNotFoundException e) {
+                } catch (PackageManager.NameNotFoundException e) {
                     android.util.Log.d("DeviceUtils", "error");
                 }
-*/
                 final Dialog dialog = new Dialog(context);
                 dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-                Drawable d =
-                        new ColorDrawable(0xFF444444);
+                Drawable d = new ColorDrawable(0xFF444444);
                 d.setAlpha(200);
-//
-//                dialog.setContentView((View) R.getLayout(R.getIdentifier("dialog","layout", context.getPackageName())));
-//                dialog.getWindow()
-//                        .setLayout(
-//                                WindowManager.LayoutParams.MATCH_PARENT,
-//                                WindowManager.LayoutParams.MATCH_PARENT);
-//                dialog.getWindow().setBackgroundDrawable(d);
-//
-//                TextView customText = dialog.findViewById(R.id.dialog_message);
-//                customText.setText("Чтобы приложение могло принимать звонки домофона в фоновом режиме, используя push-уведомления, приложение должно быть в белом списке.");
-//
-//                TextView customTitle = dialog.findViewById(R.id.dialog_title);
-//                customTitle.setText("Обнаружено энергосбережение!");
-//
-//                dialog.findViewById(R.id.dialog_do_not_ask_again_layout)
-//                        .setVisibility(View.VISIBLE);
-//                final CheckBox doNotAskAgain = dialog.findViewById(R.id.doNotAskAgain);
-//                dialog.findViewById(R.id.doNotAskAgainLabel)
-//                        .setOnClickListener(
-//                                new View.OnClickListener() {
-//                                    @Override
-//                                    public void onClick(View v) {
-//                                        doNotAskAgain.setChecked(!doNotAskAgain.isChecked());
-//                                    }
-//                                });
-//
-//                Button accept = dialog.findViewById(R.id.dialog_ok_button);
-//                accept.setVisibility(View.VISIBLE);
-//                accept.setText("Настройки");
-//                accept.setOnClickListener(
-//                        new View.OnClickListener() {
-//                            @Override
-//                            public void onClick(View v) {
-//                                Log.w(
-//                                        "[Hacks] Power saver detected, user is going to settings :)");
-//                                // If user is going into the settings,
-//                                // assume it will make the change so don't prompt again
-//                                LinphonePreferences.instance().powerSaverDialogPrompted(true);
-//
-//                                try {
-//                                    context.startActivity(intent);
-//                                } catch (SecurityException se) {
-//                                    Log.e(
-//                                            "[Hacks] Couldn't start intent [",
-//                                            intent.getComponent().getClassName(),
-//                                            "], security exception was thrown: ",
-//                                            se);
-//                                }
-//                                dialog.dismiss();
-//                            }
-//                        });
-//
-//                Button cancel = dialog.findViewById(R.id.dialog_cancel_button);
-//                cancel.setText("Пропустить");
-//                cancel.setOnClickListener(
-//                        new View.OnClickListener() {
-//                            @Override
-//                            public void onClick(View v) {
-//                                Log.w(
-//                                        "[Hacks] Power saver detected, user didn't go to settings :(");
-//                                if (doNotAskAgain.isChecked()) {
-//                                    LinphonePreferences.instance()
-//                                            .powerSaverDialogPrompted(true);
-//                                }
-//                                dialog.dismiss();
-//                            }
-//                        });
-//
-//                Button delete = dialog.findViewById(R.id.dialog_delete_button);
-//                delete.setVisibility(View.GONE);
-//
-//                dialog.show();
+
+                String packageName = context.getPackageName();
+
+                dialog.setContentView(
+					((Activity) context).findViewById(context.getResources().getIdentifier("preview_overlay_new_portrait", "layout", packageName))
+				);
+
+                dialog.getWindow()
+                        .setLayout(
+                                WindowManager.LayoutParams.MATCH_PARENT,
+                                WindowManager.LayoutParams.MATCH_PARENT);
+                dialog.getWindow().setBackgroundDrawable(d);
+
+                TextView customText = dialog.findViewById(context.getResources().getIdentifier("dialog_message", "id", packageName));
+
+                customText.setText("Чтобы приложение могло принимать звонки домофона в фоновом режиме, используя push-уведомления, приложение должно быть в белом списке.");
+
+                TextView customTitle = dialog.findViewById(context.getResources().getIdentifier("dialog_title", "id", packageName));
+                customTitle.setText("Обнаружено энергосбережение!");
+
+                dialog.findViewById(context.getResources().getIdentifier("dialog_do_not_ask_again_layout", "id", packageName))
+                        .setVisibility(View.VISIBLE);
+                final CheckBox doNotAskAgain = dialog.findViewById(context.getResources().getIdentifier("doNotAskAgain", "id", packageName));
+                dialog.findViewById(context.getResources().getIdentifier("doNotAskAgainLabel", "id", packageName))
+                        .setOnClickListener(v -> doNotAskAgain.setChecked(!doNotAskAgain.isChecked()));
+
+                Button accept = dialog.findViewById(context.getResources().getIdentifier("dialog_ok_button", "id", packageName));
+                accept.setVisibility(View.VISIBLE);
+                accept.setText("Настройки");
+                accept.setOnClickListener(
+					v -> {
+						Log.w("LinphoneDeviceUtils",
+								"[Hacks] Power saver detected, user is going to settings :)");
+						// If user is going into the settings,
+						// assume it will make the change so don't prompt again
+						LinphonePreferences.instance().powerSaverDialogPrompted(true);
+
+						try {
+							context.startActivity(intent);
+						} catch (SecurityException se) {
+							Log.e("LinphoneDeviceUtils",
+									"[Hacks] Couldn't start intent [" + intent.getComponent().getClassName() + "], security exception was thrown: ",
+									se);
+						}
+						dialog.dismiss();
+					});
+
+                Button cancel = dialog.findViewById(context.getResources().getIdentifier("dialog_cancel_button", "id", packageName));
+                cancel.setText("Пропустить");
+                cancel.setOnClickListener(
+					v -> {
+						Log.w("LinphoneDeviceUtils",
+								"[Hacks] Power saver detected, user didn't go to settings :(");
+						if (doNotAskAgain.isChecked()) {
+							LinphonePreferences.instance()
+									.powerSaverDialogPrompted(true);
+						}
+						dialog.dismiss();
+					});
+
+                Button delete = dialog.findViewById(context.getResources().getIdentifier("dialog_delete_button", "id", packageName));
+                delete.setVisibility(View.GONE);
+
+                dialog.show();
 
                 return;
             }

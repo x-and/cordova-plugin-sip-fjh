@@ -23,16 +23,11 @@ public class Linphone extends CordovaPlugin  {
     public static Core mLinphoneCore;
     public static Context mContext;
     private static final int RC_MIC_PERM = 2;
-    public static Timer mTimer;
-    public CallbackContext mListenCallback;
     CordovaInterface cordova;
 
     public SipManager manager = null;
     public SipProfile me = null;
     public SipAudioCall call = null;
-
-    public static Boolean answered = false;
-    public static Boolean closeActivity = false;
 
     private static final String TAG = "LinphoneSip";
     public static final String APPID = "924566543835";
@@ -131,7 +126,7 @@ public class Linphone extends CordovaPlugin  {
 
         if (powerManager) {
             android.util.Log.d(TAG, "SHOW DIAOL");
-            LinphoneDeviceUtils.displayDialogIfDeviceHasPowerManagerThatCouldPreventPushNotifications(cordova.getActivity().getResources(), cordova.getActivity());
+            LinphoneDeviceUtils.displayDialogIfDeviceHasPowerManagerThatCouldPreventPushNotifications(cordova.getActivity());
             powerManager = false;
         }
 
