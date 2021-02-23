@@ -118,22 +118,19 @@ public class LinphoneContext {
         answered = false;
 
         dispatchOnUIThread(
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        mLinphoneManager.ensureRegistered();
+			() -> {
+				mLinphoneManager.ensureRegistered();
 
-                        Intent intent = new Intent(mContext, LinphoneMiniActivity.class);
-                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
-                        intent.putExtra("address", "");
-                        intent.putExtra("displayName", "");
+				Intent intent = new Intent(mContext, LinphoneMiniActivity.class);
+				intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT);
+				intent.putExtra("address", "");
+				intent.putExtra("displayName", "");
 
-                        mLinphoneManager.previewCall();
+				mLinphoneManager.previewCall();
 
-                        mContext.startActivity(intent);
-                    }
-                }
-        );
+				mContext.startActivity(intent);
+			}
+		);
     }
 
     public static boolean hasForeground() {

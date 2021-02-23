@@ -29,6 +29,7 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.Build;
 import android.os.Vibrator;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
@@ -68,7 +69,6 @@ import org.linphone.core.RegistrationState;
 import org.linphone.core.SubscriptionState;
 import org.linphone.core.Transports;
 import org.linphone.core.VersionUpdateCheckResult;
-import org.linphone.mediastream.Log;
 import org.linphone.mediastream.video.capture.hwconf.AndroidCameraConfiguration;
 import org.linphone.mediastream.video.capture.hwconf.AndroidCameraConfiguration.AndroidCamera;
 
@@ -111,9 +111,9 @@ public class LinphoneMiniManager implements CoreListener {
         mContext = c;
         mVibrator = (Vibrator) mContext.getSystemService(Context.VIBRATOR_SERVICE);
 
-        Factory.instance().setDebugMode(true, TAG /*"Linphone Mini"*/);
+        Factory.instance().setDebugMode(true, TAG + "_native" /*"Linphone Mini"*/);
 
-        android.util.Log.d(TAG, "Start initializing Linphone");
+        Log.d(TAG, "Start initializing Linphone");
 
         mPrefs = LinphonePreferences.instance();
 
@@ -134,9 +134,9 @@ public class LinphoneMiniManager implements CoreListener {
 
             mCore.enableIpv6(false);
 
+            // TODO надо починить вариант пуша в фореграунде, звонит со второго раза
             if (isPush) {
-                android.util.Log.w(TAG,
-                        "[Manager] We are here because of a received push notification, enter background mode before starting the Core");
+                Log.w(TAG,"[Manager] We are here because of a received push notification, enter background mode before starting the Core");
                 mCore.enterBackground();
             }
 
@@ -165,7 +165,7 @@ public class LinphoneMiniManager implements CoreListener {
                                 @Override
                                 public void onLost(Network network) {
                                     if (mCore != null && LinphoneContext.hasForeground()) {
-                                        android.util.Log.d(TAG, "connection lost");
+                                        Log.d(TAG, "connection lost");
                                         mCore.refreshRegisters();
                                     }
                                 }
@@ -173,42 +173,16 @@ public class LinphoneMiniManager implements CoreListener {
                                 @Override
                                 public void onAvailable(Network network) {
                                     if (mCore != null && LinphoneContext.hasForeground()) {
-                                        android.util.Log.d(TAG, "connection check - refreshRegisters");
+                                        Log.d(TAG, "connection check - refreshRegisters");
                                         mCore.refreshRegisters();
                                     }
                                 }
                             }
                     );
                 }
-
-                Log.i(
-                        "[Push Notification] firebase push sender id ");
-                try {
-                    FirebaseInstanceId.getInstance()
-                            .getInstanceId()
-                            .addOnCompleteListener(
-                                    new OnCompleteListener<InstanceIdResult>() {
-                                        @Override
-                                        public void onComplete(@NonNull Task<InstanceIdResult> task) {
-                                            if (!task.isSuccessful()) {
-                                                android.util.Log.e(TAG,
-                                                        "[Push Notification] firebase getInstanceId failed: "
-                                                                + task.getException());
-                                                return;
-                                            }
-                                            String token = task.getResult().getToken();
-                                            android.util.Log.i(TAG, "[Push Notification] firebase token is: " + token);
-                                            LinphonePreferences.instance()
-                                                    .setPushNotificationRegistrationID(token);
-                                        }
-                                    });
-                } catch (Exception e) {
-                    android.util.Log.e(TAG, "[Push Notification] firebase not available.");
-                }
             }
         } catch (IOException e) {
-            android.util.Log.d(TAG, "Error initializing Linphone");
-            Log.e(new Object[]{"Error initializing Linphone", e.getMessage()});
+            Log.e(TAG, "Error initializing Linphone " + e.getMessage());
         }
     }
 
@@ -221,6 +195,7 @@ public class LinphoneMiniManager implements CoreListener {
     }
 
     public void destroy() {
+		Log.w(TAG, "[Manager] Destroying Core");
         try {
             mTimer.cancel();
             mCore.stopRinging();
@@ -239,7 +214,7 @@ public class LinphoneMiniManager implements CoreListener {
     }
 
     private void destroyCore() {
-        Log.w("[Manager] Destroying Core");
+        Log.w(TAG, "[Manager] Destroying Core");
 
         if (LinphonePreferences.instance() != null) {
             mCore.setNetworkReachable(false);
@@ -250,6 +225,7 @@ public class LinphoneMiniManager implements CoreListener {
     }
 
     private void startIterate() {
+    	Log.d(TAG, "startIterate");
         TimerTask lTask = new TimerTask() {
             @Override
             public void run() {
@@ -322,7 +298,7 @@ public class LinphoneMiniManager implements CoreListener {
             params.enableVideo(true);
             mCore.inviteAddressWithParams(lAddress, params);
         } else {
-            Log.e(new Object[]{"Error: Network unreachable"});
+            Log.e(TAG, "[Manager] Error: Network unreachable");
         }
     }
 
@@ -332,68 +308,72 @@ public class LinphoneMiniManager implements CoreListener {
             return;
         }
 
-        android.util.Log.d(TAG, "[SET Push Notification] " + appId + " " + regId);
+        Log.d(TAG, "[SET Push Notification] " + appId + " " + regId);
 
-        if (regId != "") {
-            // Add push infos to exisiting proxy configs
-            if (core.getProxyConfigList().length > 0) {
-                for (ProxyConfig lpc : core.getProxyConfigList()) {
-                    if (lpc == null) continue;
-                    if (!lpc.isPushNotificationAllowed()) {
-                        lpc.edit();
-                        lpc.setContactUriParameters(null);
-                        lpc.done();
-                        if (lpc.getIdentityAddress() != null)
-                            android.util.Log.d(TAG,
-                                    "[SET Push Notification] infos removed from proxy config "
-                                            + lpc.getIdentityAddress().asStringUriOnly());
-                    } else {
-                        String contactInfos =
-                                "app-id="
-                                        + appId
-                                        + ";pn-type=firebase"
-                                        + ";pn-timeout=0"
-                                        + ";pn-tok="
-                                        + regId
-                                        + ";pn-silent=1";
+//        if (!regId.isEmpty()) {
+//            // Add push infos to exisiting proxy configs
+//            if (core.getProxyConfigList().length > 0) {
+//                for (ProxyConfig lpc : core.getProxyConfigList()) {
+//                    if (lpc == null) continue;
+//                    if (!lpc.isPushNotificationAllowed()) {
+//                        lpc.edit();
+//                        lpc.setContactUriParameters(null);
+//                        lpc.done();
+//                        if (lpc.getIdentityAddress() != null)
+//                            Log.d(TAG,
+//                                    "[SET Push Notification] infos removed from proxy config "
+//                                            + lpc.getIdentityAddress().asStringUriOnly());
+//                    } else {
+//                        String contactInfos =
+//                                "app-id="
+//                                        + appId
+//                                        + ";pn-type=firebase"
+//                                        + ";pn-timeout=0"
+//                                        + ";pn-tok="
+//                                        + regId
+//                                        + ";pn-silent=1";
+//
+//                        android.util.Log.d(TAG, contactInfos);
+//                        String prevContactParams = lpc.getContactParameters();
+//                        if (prevContactParams == null
+//                                || prevContactParams.compareTo(contactInfos) != 0) {
+//                            lpc.edit();
+//                            lpc.setContactUriParameters(contactInfos);
+//                            lpc.done();
+//                            if (lpc.getIdentityAddress() != null)
+//                                android.util.Log.d(TAG,
+//                                        "[Push Notification] infos added to proxy config "
+//                                                + lpc.getIdentityAddress().asStringUriOnly());
+//                        }
+//                    }
+//                }
+//                Log.d(TAG,
+//                        "[SET Push Notification] Refreshing registers to ensure token is up to date: "
+//                                + regId);
+//                core.refreshRegisters();
+//            } else {
+//                Log.d(TAG, "[Push Notification] enable token flag");
+//                flToken = true;
+//                loginFromStorage();
+//            }
+//        } else {
+//
+//            if (core.getProxyConfigList().length > 0) {
+//                for (ProxyConfig lpc : core.getProxyConfigList()) {
+//                    lpc.edit();
+//                    lpc.setContactUriParameters(null);
+//                    lpc.done();
+//                    if (lpc.getIdentityAddress() != null)
+//                        Log.d(TAG,
+//                                "[SET Push Notification] infos removed from proxy config "
+//                                        + lpc.getIdentityAddress().asStringUriOnly());
+//                }
+//                core.refreshRegisters();
+//            }
+//        }
 
-                        android.util.Log.d(TAG, contactInfos);
-                        String prevContactParams = lpc.getContactParameters();
-                        if (prevContactParams == null
-                                || prevContactParams.compareTo(contactInfos) != 0) {
-                            lpc.edit();
-                            lpc.setContactUriParameters(contactInfos);
-                            lpc.done();
-                            if (lpc.getIdentityAddress() != null)
-                                android.util.Log.d(TAG,
-                                        "[Push Notification] infos added to proxy config "
-                                                + lpc.getIdentityAddress().asStringUriOnly());
-                        }
-                    }
-                }
-                android.util.Log.d(TAG,
-                        "[SET Push Notification] Refreshing registers to ensure token is up to date: "
-                                + regId);
-                core.refreshRegisters();
-            } else {
-                android.util.Log.d(TAG, "[Push Notification] enable token flag");
-                flToken = true;
-                loginFromStorage();
-            }
-        } else {
-            if (core.getProxyConfigList().length > 0) {
-                for (ProxyConfig lpc : core.getProxyConfigList()) {
-                    lpc.edit();
-                    lpc.setContactUriParameters(null);
-                    lpc.done();
-                    if (lpc.getIdentityAddress() != null)
-                        android.util.Log.d(TAG,
-                                "[SET Push Notification] infos removed from proxy config "
-                                        + lpc.getIdentityAddress().asStringUriOnly());
-                }
-                core.refreshRegisters();
-            }
-        }
+
+
     }
 
     public void terminateCall() {
@@ -444,7 +424,7 @@ public class LinphoneMiniManager implements CoreListener {
         Core lc = mCore;
         Call lCall = lc.getCurrentCall();
         if (lCall == null) {
-            Log.e(new Object[]{"Trying to updateCall while not in call: doing nothing"});
+            Log.e(TAG, "[Manager] Trying to updateCall while not in call: doing nothing");
         } else {
             CallParams params = lCall.getParams();
             lc.getCurrentCall().setParams(params);
@@ -452,19 +432,23 @@ public class LinphoneMiniManager implements CoreListener {
     }
 
     public void listenCall(CallbackContext callbackContext) {
+    	Log.d(TAG, "listenCall");
         mCallbackContext = callbackContext;
     }
 
     public void listenLogin(CallbackContext callbackContext) {
-        mLoginCallbackContext = callbackContext;
+		Log.d(TAG, "listenLogin");
+		mLoginCallbackContext = callbackContext;
     }
 
     public void ensureRegistered(){
+		Log.d(TAG, "ensureRegistered");
         Core lc = mCore;
         lc.ensureRegistered();
     }
 
     public void setStunServer(String stunServer) {
+		Log.d(TAG, "setStunServer");
         ProxyConfig mProxyConfig = mCore.getDefaultProxyConfig();
         if (mProxyConfig == null) {
             return;
@@ -483,6 +467,7 @@ public class LinphoneMiniManager implements CoreListener {
     }
 
     public void disableStunServer() {
+		Log.d(TAG, "disableStunServer");
         ProxyConfig mProxyConfig = mCore.getDefaultProxyConfig();
         mProxyConfig.edit();
         NatPolicy natPolicy = mProxyConfig.getNatPolicy();
@@ -511,10 +496,10 @@ public class LinphoneMiniManager implements CoreListener {
         if (call != null){
             String agent = call.getRemoteUserAgent();
 
-            android.util.Log.e(TAG, "agent: " + agent);
+           	Log.e(TAG, "agent: " + agent);
 
             if (agent.matches("(.*)Rubetek(.*)")) {
-                android.util.Log.e(TAG, "agent: RUBETEK CALL");
+                Log.e(TAG, "agent: RUBETEK CALL");
                 CallParams params = call.getParams();
                 params.enableVideo(true);
                 params.enableAudio(false);
@@ -540,18 +525,18 @@ public class LinphoneMiniManager implements CoreListener {
     public boolean loginFromStorage() {
         String username = mStorage.getUsername();
 
-        android.util.Log.i(TAG, "[Mini manager] login from storage " + username);
+        Log.i(TAG, "[Mini manager] login from storage " + username);
 
-        if (username != "") {
-            android.util.Log.i(TAG, "[Mini manager] logining from storage");
+        String stun = mStorage.getStun();
 
-            login(username, mStorage.getPassword(), mStorage.getDomain());
+		if (stun != "") {
+			setStunServer(stun);
+		}
 
-            String stun = mStorage.getStun();
+		if (username != "") {
+			Log.i(TAG, "[Mini manager] logining from storage");
 
-            if (stun != "") {
-                setStunServer(stun);
-            }
+			login(username, mStorage.getPassword(), mStorage.getDomain());
 
             return true;
         }
@@ -570,12 +555,16 @@ public class LinphoneMiniManager implements CoreListener {
     }
 
     public void clearRegistration() {
+    	Log.d(TAG, "clearRegistration");
         mCore.clearAllAuthInfo();
         mCore.clearProxyConfig();
     }
 
     public void login(String username, String password, String domain) {
-        clearRegistration();
+		Log.d(TAG, "login " + username + " " + password + " " + domain);
+		Log.d(TAG, Thread.currentThread().getStackTrace().toString());
+
+		clearRegistration();
 
         Factory lcFactory = Factory.instance();
 
@@ -585,7 +574,7 @@ public class LinphoneMiniManager implements CoreListener {
         transports.setTlsPort(RANDOM_PORT);
         mCore.setTransports(transports);
 
-        android.util.Log.d(TAG, "auth full: " + username + " " + password + " " + domain);
+        Log.d(TAG, "auth full: " + username + " " + password + " " + domain);
 
         Address address = lcFactory.createAddress("sip:" + username);
 
@@ -631,6 +620,7 @@ public class LinphoneMiniManager implements CoreListener {
     }
 
     public void logout() {
+		Log.d(TAG, "logout");
         ProxyConfig[] prxCfgs = mCore.getProxyConfigList();
         if (prxCfgs.length > 0) {
             final ProxyConfig proxyCfg = prxCfgs[0];
@@ -648,8 +638,9 @@ public class LinphoneMiniManager implements CoreListener {
 
     @Override
     public void onRegistrationStateChanged(Core core, ProxyConfig proxyConfig, RegistrationState registrationState, String s) {
-        if (registrationState == RegistrationState.Ok) {
-            android.util.Log.d(TAG, "RegistrationSuccess");
+		Log.d(TAG, "onRegistrationStateChanged " + registrationState.name()  + " - " + proxyConfig.getContact().asStringUriOnly());
+
+		if (registrationState == RegistrationState.Ok) {
 
             if (flToken) {
                 mPrefs.setPushNotificationEnabled(true);

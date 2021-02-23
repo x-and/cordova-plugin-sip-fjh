@@ -23,11 +23,14 @@ import android.app.Activity;
 import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.opengl.GLSurfaceView;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -42,7 +45,6 @@ import org.linphone.core.Call;
 import org.linphone.core.CallParams;
 import org.linphone.core.Core;
 import org.linphone.core.Reason;
-import org.linphone.mediastream.Log;
 import org.linphone.mediastream.video.AndroidVideoWindowImpl;
 
 import java.util.Timer;
@@ -52,7 +54,8 @@ import java.util.TimerTask;
  * @author Sylvain Berfini
  */
 public class LinphoneMiniActivity extends Activity {
-    private SurfaceView mVideoView;
+	private static final String TAG = "LinphoneSip";
+	private SurfaceView mVideoView;
     private SurfaceView mCaptureView;
     private AndroidVideoWindowImpl androidVideoWindowImpl;
     private Button answerButton;
@@ -90,7 +93,7 @@ public class LinphoneMiniActivity extends Activity {
         Resources R = getApplication().getResources();
         String packageName = getApplication().getPackageName();
 
-        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
 
         setContentView(R.getIdentifier("incall", "layout", packageName));
 
@@ -109,7 +112,7 @@ public class LinphoneMiniActivity extends Activity {
 
         androidVideoWindowImpl = new AndroidVideoWindowImpl(mVideoView, mCaptureView, new AndroidVideoWindowImpl.VideoWindowListener() {
             public void onVideoRenderingSurfaceReady(AndroidVideoWindowImpl vw, SurfaceView surface) {
-                Log.d("onVideoRenderingSurfaceReady");
+                Log.d(TAG, "onVideoRenderingSurfaceReady");
                 Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
                 if (lc != null) {
                     Call c = lc.getCurrentCall();
@@ -121,7 +124,7 @@ public class LinphoneMiniActivity extends Activity {
             }
 
             public void onVideoRenderingSurfaceDestroyed(AndroidVideoWindowImpl vw) {
-                Log.d("onVideoRenderingSurfaceDestroyed");
+                Log.d(TAG, "onVideoRenderingSurfaceDestroyed");
                 Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
                 if (lc != null) {
                     Call c = lc.getCurrentCall();
@@ -132,14 +135,14 @@ public class LinphoneMiniActivity extends Activity {
             }
 
             public void onVideoPreviewSurfaceReady(AndroidVideoWindowImpl vw, SurfaceView surface) {
-                Log.d("onVideoPreviewSurfaceReady");
+                Log.d(TAG, "onVideoPreviewSurfaceReady");
                 mCaptureView = surface;
                 LinphoneContext.instance().mLinphoneManager.getLc().setNativePreviewWindowId(mCaptureView);
 
             }
 
             public void onVideoPreviewSurfaceDestroyed(AndroidVideoWindowImpl vw) {
-                Log.d("onVideoPreviewSurfaceDestroyed");
+                Log.d(TAG, "onVideoPreviewSurfaceDestroyed");
                 // Remove references kept in jni code and restart camera
                 LinphoneContext.instance().mLinphoneManager.getLc().setNativePreviewWindowId(null);
             }
@@ -152,39 +155,17 @@ public class LinphoneMiniActivity extends Activity {
 
         unlockButton = (Button) findViewById(R.getIdentifier("unlockButton", "id", packageName));
 
-        //float alpha = 0.1f;
-        //AlphaAnimation alphaUp = new AlphaAnimation(alpha, alpha);
-        //alphaUp.setFillAfter(true);
-        //unlockButton.setEnabled(false);
-        //unlockButton.startAnimation(alphaUp);
-
-/*
-        unlockButton.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
-                if (lc != null) {
-                    Call call = lc.getCurrentCall();
-                    if (call != null) {
-                        int action = event.getAction();
-                        switch (action) {
-                            case MotionEvent.ACTION_DOWN:
-                                v.startAnimation(unlockAnim);
-                                call.sendDtmfs("12#");
-                                android.util.Log.d("LinphoneSip", "sending Dtmfs");
-                                break;
-                            case MotionEvent.ACTION_UP:
-                                call.cancelDtmfs();
-                                android.util.Log.d("LinphoneSip", "cancel Dtmfs");
-                                break;
-                        }
-                    }
-                }
-
-                return true;
-            }
-        });
-*/
+		unlockButton.setOnClickListener(v -> {
+			Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
+			if (lc != null) {
+				Call call = lc.getCurrentCall();
+				if (call != null) {
+					v.startAnimation(unlockAnim);
+					call.sendDtmfs("101#");
+					Log.d(TAG, "sending Dtmfs");
+				}
+			}
+		});
 
         Intent i = getIntent();
         Bundle extras = i.getExtras();
@@ -225,10 +206,8 @@ public class LinphoneMiniActivity extends Activity {
                 float alpha = 1f;
                 AlphaAnimation alphaUp = new AlphaAnimation(alpha, alpha);
                 alphaUp.setFillAfter(true);
-                //unlockButton.setEnabled(false);
-                //unlockButton.startAnimation(alphaUp);
 
-                //unlockButton.setEnabled(true);
+                unlockButton.setEnabled(true);
 
                 LinphoneContext.answered = true;
             }
@@ -239,35 +218,35 @@ public class LinphoneMiniActivity extends Activity {
         onBackPressed();
     }
 
-    public void butUnlock(View v) {
-        if (unlockTimer != null) {
-            return;
-        }
-
-        Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
-        if (lc != null) {
-            Call call = lc.getCurrentCall();
-            if (call != null) {
-                v.startAnimation(unlockAnim);
-                call.sendDtmfs("12#");
-                android.util.Log.d("LinphoneSip", "sending Dtmfs");
-
-                TimerTask lTask = new TimerTask() {
-                    @Override
-                    public void run() {
-                        call.cancelDtmfs();
-                        unlockTimer.cancel();
-                        unlockTimer = null;
-
-                        android.util.Log.d("LinphoneSip", "stop Dtmfs");
-                    }
-                };
-
-                unlockTimer = new Timer("Dtmfs scheduler");
-                unlockTimer.schedule(lTask, 1600);
-            }
-        }
-    }
+//    public void butUnlock(View v) {
+//        if (unlockTimer != null) {
+//            return;
+//        }
+//
+//        Core lc = LinphoneContext.instance().mLinphoneManager.getLc();
+//        if (lc != null) {
+//            Call call = lc.getCurrentCall();
+//            if (call != null) {
+//                v.startAnimation(unlockAnim);
+//                call.sendDtmfs("12#");
+//                android.util.Log.d("LinphoneSip", "sending Dtmfs");
+//
+//                TimerTask lTask = new TimerTask() {
+//                    @Override
+//                    public void run() {
+//                        call.cancelDtmfs();
+//                        unlockTimer.cancel();
+//                        unlockTimer = null;
+//
+//                        android.util.Log.d("LinphoneSip", "stop Dtmfs");
+//                    }
+//                };
+//
+//                unlockTimer = new Timer("Dtmfs scheduler");
+//                unlockTimer.schedule(lTask, 1600);
+//            }
+//        }
+//    }
 
     @Override
     protected void onResume() {
