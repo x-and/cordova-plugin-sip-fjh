@@ -34,14 +34,15 @@ public class LinphoneForegroundService extends Service {
         String action = ACTION_START_FOREGROUND_SERVICE;
 
         if (intent != null) {
-            Log.d(TAG, "[Foreground Service] NULL ACTION");
             action = intent.getAction();
-        }
+			Log.d(TAG, "[Foreground Service] ACTION " + action);
+		}
 
         switch (action) {
             case ACTION_STOP_FOREGROUND_SERVICE:
 				Log.d(TAG, "[Foreground Service] onStartCommand stop");
-                stopForegroundService();
+
+//				stopForegroundService();
                 break;
 
             case ACTION_START_FOREGROUND_SERVICE:
@@ -81,11 +82,16 @@ public class LinphoneForegroundService extends Service {
                 TimerTask lTask = new TimerTask() {
                     @Override
                     public void run() {
-                    if (LinphoneMiniManager.mCore != null) {
-                        LinphoneMiniManager.mCore.refreshRegisters();
-                    }
+                    	Log.d(TAG, "[Timer] refreshRegisters");
+						if (LinphoneMiniManager.mCore != null) {
+							LinphoneMiniManager.mCore.refreshRegisters();
+						}
                     }
                 };
+
+				if (mTimer != null) {
+					mTimer.cancel();
+				}
 
                 mTimer = new Timer("LinphoneMini scheduler 2");
                 mTimer.schedule(lTask, 0, 60000);
@@ -103,7 +109,7 @@ public class LinphoneForegroundService extends Service {
     public void onTaskRemoved(Intent rootIntent) {
         super.onTaskRemoved(rootIntent);
 		Log.d(TAG, "[Foreground Service] onTaskRemoved");
-        stopForegroundService();
+//        stopForegroundService();
 
         if (!LinphoneContext.isReady()) {
             android.util.Log.e(TAG, "[Foreground Service] Starting context");

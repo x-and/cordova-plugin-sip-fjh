@@ -18,14 +18,16 @@ public class LinphoneFirebaseMessaging extends FirebaseMessagingService {
 		() -> {
 			if (!LinphoneContext.isReady()) {
 				Log.i(TAG, "[Push Notification] Starting context");
+
 				new LinphoneContext(getApplicationContext(), true);
 			} else {
 				Log.i(TAG, "[Push Notification] Notifying Core");
 				if (LinphoneMiniManager.getInstance() != null) {
 					Core core = LinphoneMiniManager.mCore;
 					if (core != null) {
-						Log.i(TAG, "[Push Notification] ensureRegisterede");
-						core.refreshRegisters();
+						Log.i(TAG, "[Push Notification] ensureRegistered");
+						core.ensureRegistered();
+						//						core.refreshRegisters();
 					}
 				}
 			}

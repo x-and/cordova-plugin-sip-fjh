@@ -1,5 +1,6 @@
 [net]
 mtu=1300
+enable_nat_helper=0
 
 [sip]
 guess_hostname=1
