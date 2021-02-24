@@ -86,11 +86,11 @@
     </config-file>
     <config-file target="AndroidManifest.xml" parent="/manifest/application">
       <activity android:name="com.sip.linphone.LinphoneMiniActivity" android:theme="@android:style/Theme.Black.NoTitleBar" />
-<!--       <service android:exported="false" android:name="com.sip.linphone.LinphoneFirebaseMessaging">
+      <service android:exported="false" android:name="com.sip.linphone.LinphoneFirebaseMessaging">
           <intent-filter>
               <action android:name="com.google.firebase.MESSAGING_EVENT" />
           </intent-filter>
-      </service> -->
+      </service>
       <service android:enabled="true" android:exported="true" android:name="com.sip.linphone.LinphoneForegroundService">
       </service>
       <receiver android:name="com.sip.linphone.LinphoneBootReceiver">
